@@ -1,132 +1,215 @@
 # Property Inspection Platform
 
 ## Project Overview
-- **Name**: Property Inspection Platform
-- **Goal**: Professional property condition reporting system powered by Gemini AI for automated photo analysis and report generation
-- **Features**: AI-powered property inspections, automated report generation, cloud storage
+- **Name**: Property Inspection Platform  
+- **Goal**: Comprehensive property inspection management system with AI-powered photo analysis
+- **Company**: Remote Business Partner
+- **Features**: Entry, Routine, and Exit property condition reports with Gemini AI integration
 
-## 🚀 DEPLOYMENT COMPLETE!
+## Live URLs
+- **Production**: https://property-inspection.pages.dev
+- **Sandbox Dev**: https://3000-ij3c3oj6h9i36yb7qfcah-b32ec7bb.sandbox.novita.ai
+- **Latest Deploy**: https://e1f48880.property-inspection.pages.dev
 
-### Production URLs
-- **Main Application**: https://property-inspection.pages.dev
-- **Deployment Preview**: https://c71edbda.property-inspection.pages.dev
-- **API Health Check**: https://property-inspection.pages.dev/api/health
+## Currently Completed Features
 
-### Development URLs
-- **Local Development**: https://3000-ij3c3oj6h9i36yb7qfcah-b32ec7bb.sandbox.novita.ai
-- **Local Health Check**: https://3000-ij3c3oj6h9i36yb7qfcah-b32ec7bb.sandbox.novita.ai/api/health
+### ✅ Dashboard & Navigation
+- Professional dashboard with card-based navigation
+- Three distinct inspection types: Entry, Routine, Exit
+- Mobile-responsive design with collapsible menu
+- Clean, modern UI with Tailwind CSS
+
+### ✅ Inspection Reports
+Each report type (Entry/Routine/Exit) includes:
+- **Property Details Form**
+  - Property address
+  - Owner/landlord name
+  - Tenant information
+  - Inspection date
+  
+- **Room Management**
+  - Add rooms from predefined list (20+ room types)
+  - Auto-populate room-specific items
+  - Delete rooms functionality
+  
+- **Item Checklist per Room**
+  - Pre-populated items based on room type
+  - Clean/Undamaged/Working status toggles
+  - Individual comments per item
+  - Add custom items capability
+  
+- **Photo Management**
+  - Multiple photo upload per room
+  - Photo preview thumbnails
+  - Remove individual photos
+  - AI analysis button for photo inspection
+
+### ✅ AI Integration (Google Gemini)
+- **API Key**: Configured and working
+- **Model**: gemini-2.0-flash-exp
+- **Features**:
+  - Analyze room photos for condition assessment
+  - Auto-populate item statuses based on photo
+  - Generate professional inspection comments
+  - Australian English spelling compliance
+
+### ✅ Data Persistence
+- Save reports to Cloudflare KV storage
+- Load existing reports by type
+- Delete reports functionality
+- Auto-save report metadata for quick loading
+
+### ✅ Report Preview & Export
+- Full-page print preview mode
+- Formatted for A4 paper size
+- Print-optimized CSS
+- Room photos included in preview
+- Item status tables with checkmarks
+
+## API Endpoints
+
+### Health & Status
+- `GET /api/health` - Service health check
+- `GET /api/gemini/test` - Test Gemini AI connection
+
+### Report Management
+- `POST /api/reports/save` - Save report to KV storage
+- `GET /api/reports` - Retrieve all reports
+- `DELETE /api/reports/:id` - Delete specific report
+
+### AI Analysis
+- `POST /api/gemini/analyze` - Analyze room photo
+  - Request: `{ image: base64, roomType: string, existingComment: string }`
+  - Response: `{ overallComment: string, items: { [itemName]: { isClean, isUndamaged, isWorking, comment } } }`
 
 ## Data Architecture
-- **Data Models**: 
-  - ReportData: Property inspection reports with rooms, items, and photos
-  - Room: Individual room data with inspection items
-  - InspectionItem: Individual items to inspect with condition flags
-  - Photo: Image data with tags and analysis
-- **Storage Services**: 
-  - Cloudflare KV: For storing inspection reports (ID: 0fc9095ee72a4abfb72fc4d8f73affe4)
-  - Gemini AI: For AI-powered image analysis (API Key configured)
-- **Data Flow**: 
-  1. User uploads property photos
-  2. Gemini AI analyzes photos for condition assessment
-  3. System generates structured inspection report
-  4. Report saved to Cloudflare KV storage
-  5. PDF export available for final reports
 
-## ✅ Features Completed
-- **Hono Backend API** - Fully operational server with Cloudflare Pages
-- **Gemini AI Integration** - Connected and tested with your API key
-- **React Frontend** - Full inspection interface with photo upload
-- **Cloud Storage** - Cloudflare KV namespaces created and configured
-- **API Endpoints** - All CRUD operations for reports
-- **Production Deployment** - Live on Cloudflare Pages
-- **Secret Management** - Gemini API key securely stored
+### Data Models
+```typescript
+interface ReportData {
+  id: string
+  type: 'Entry' | 'Routine' | 'Exit'
+  propertyAddress: string
+  agentName: string
+  agentCompany: string
+  clientName: string
+  tenantName: string
+  inspectionDate: string
+  rooms: Room[]
+}
 
-## 🔧 API Endpoints (All Working!)
-- `GET /api/health` - Health check and status ✅
-- `POST /api/gemini/analyze` - AI-powered image analysis ✅
-  - Body: `{ prompt: string, images: [{data: base64, mimeType: string}], model?: string }`
-- `GET /api/reports` - List all saved reports ✅
-- `POST /api/reports/save` - Save inspection report ✅
-  - Body: Full ReportData object
-- `GET /api/reports/:id` - Get specific report by ID ✅
-- `DELETE /api/reports/:id` - Delete report by ID ✅
+interface Room {
+  id: string
+  name: string
+  items: InspectionItem[]
+  photos: Photo[]
+  overallComment: string
+}
 
-## User Guide
-1. **Access the platform**: Navigate to https://property-inspection.pages.dev
-2. **Enter Property Details**: Fill in address, client, tenant information
-3. **Add Rooms**: Select room type or enter custom name
-4. **Upload Photos**: Click "Add Photos" for each room to upload property images
-5. **AI Analysis**: Photos are automatically analyzed by Gemini AI
-6. **Review Checklist**: Check/uncheck items for Clean, Undamaged, Working status
-7. **Save Report**: Click "Save Report" to store in cloud
-8. **Load Reports**: Click "Load Report" to retrieve previous inspections
-
-## Deployment Status
-- **Platform**: Cloudflare Pages with Workers
-- **Status**: ✅ **PRODUCTION LIVE**
-- **Project Name**: property-inspection
-- **Account**: Info@remotebusinesspartner.com.au
-- **Tech Stack**: 
-  - Backend: Hono + TypeScript + Cloudflare Workers
-  - Frontend: React + TypeScript + TailwindCSS (CDN)
-  - AI: Google Gemini API (gemini-2.0-flash-exp)
-  - Storage: Cloudflare KV
-- **Last Deployed**: December 11, 2024
-
-## Configuration Details
-
-### Cloudflare Resources
-- **Account ID**: 8ca23ac6d2cc906d4dd13b8da5ea2b25
-- **KV Namespace (Production)**: 0fc9095ee72a4abfb72fc4d8f73affe4
-- **KV Namespace (Preview)**: e4ceae6cb64d463994f64bdfd19d3ee3
-- **Gemini API Key**: Configured as secret in Cloudflare Pages
-
-### Local Development Setup
-1. Clone the repository
-2. Install dependencies: `npm install`
-3. Start dev server: `pm2 start ecosystem.config.cjs`
-4. Access at http://localhost:3000
-
-### Deployment Commands
-```bash
-# Build the project
-npm run build:server
-
-# Deploy to production
-npx wrangler pages deploy dist --project-name property-inspection
-
-# Update secrets
-echo "YOUR_API_KEY" | npx wrangler pages secret put GEMINI_API_KEY --project-name property-inspection
-
-# View logs
-npx wrangler pages tail --project-name property-inspection
+interface InspectionItem {
+  id: string
+  name: string
+  isClean: boolean
+  isUndamaged: boolean
+  isWorking: boolean
+  comment: string
+}
 ```
 
-## Features Working in Production
-1. ✅ **Property Details Form** - Enter all inspection details
-2. ✅ **Room Management** - Add/remove rooms dynamically
-3. ✅ **Photo Upload** - Upload multiple photos per room
-4. ✅ **AI Integration** - Gemini analyzes uploaded photos
-5. ✅ **Inspection Checklist** - Track item conditions
-6. ✅ **Cloud Storage** - Save/load reports from KV
-7. ✅ **Responsive Design** - Works on desktop and mobile
+### Storage Services
+- **Cloudflare KV**: Report data persistence
+- **Cloudflare Pages**: Static hosting and edge functions
+- **Base64 Images**: Embedded in report data for simplicity
 
-## Next Steps for Enhancement
-1. **PDF Export** - Add PDF generation with jsPDF
-2. **Enhanced AI Analysis** - More detailed defect detection
-3. **User Authentication** - Add login system
-4. **Report Templates** - Customizable inspection templates
-5. **Batch Processing** - Handle multiple properties
-6. **Email Integration** - Send reports directly to clients
+## User Guide
 
-## Support & Monitoring
-- **Check Service Health**: https://property-inspection.pages.dev/api/health
-- **View Deployment Logs**: `npx wrangler pages tail --project-name property-inspection`
-- **KV Data Management**: Use Cloudflare dashboard or wrangler CLI
+### Creating a New Inspection Report
+1. Click on the appropriate inspection type from dashboard
+2. Enter property details (address, tenant, owner, date)
+3. Add rooms using the dropdown selector
+4. For each room:
+   - Upload photos (optional but recommended)
+   - Click "AI Analysis" to auto-assess condition
+   - Review/adjust item checkboxes
+   - Add specific comments as needed
+5. Save the report using the "Save Report" button
+6. Use "Preview" to see print-ready format
+7. Click "Print / Save PDF" to export
 
-## Success Metrics
-- ✅ API Response Time: < 500ms
-- ✅ Gemini AI Connected: Working
-- ✅ Data Persistence: Cloudflare KV operational
-- ✅ Global CDN: Deployed on Cloudflare edge network
-- ✅ HTTPS Enabled: Secure by default
+### Loading Existing Reports
+1. Click "Load Report" button
+2. Select from list of saved reports
+3. Report will populate all fields and rooms
+4. Continue editing or preview as needed
+
+### AI Photo Analysis
+1. Upload one or more photos to a room
+2. Click "AI Analysis" button
+3. Wait for Gemini to process (2-5 seconds)
+4. Review auto-populated:
+   - Item status checkboxes
+   - Overall room comment
+   - Specific item issues
+
+## Technical Stack
+- **Frontend**: React 18, Tailwind CSS, Font Awesome
+- **Backend**: Hono on Cloudflare Workers
+- **AI**: Google Gemini 2.0 Flash
+- **Storage**: Cloudflare KV
+- **Deployment**: Cloudflare Pages
+- **Build**: Vite, Wrangler
+
+## Features Not Yet Implemented
+- [ ] PDF export to file (currently print-to-PDF only)
+- [ ] User authentication and multi-tenancy
+- [ ] Report comparison (Entry vs Exit)
+- [ ] Email report distribution
+- [ ] Maintenance request generation
+- [ ] Report templates and customization
+- [ ] Bulk photo upload
+- [ ] Report signatures
+- [ ] Property database integration
+
+## Recommended Next Steps
+1. **PDF Generation**: Implement server-side PDF generation for direct download
+2. **Authentication**: Add user login system with role-based access
+3. **Report Comparison**: Build Entry vs Exit comparison for bond assessment
+4. **Email Integration**: Automated report distribution to tenants/owners
+5. **Mobile App**: Native mobile app for on-site inspections
+6. **Offline Mode**: Enable offline inspection with sync capability
+7. **Advanced Search**: Filter and search across all reports
+8. **Analytics Dashboard**: Property condition trends and insights
+
+## Deployment Configuration
+- **Platform**: Cloudflare Pages
+- **Project Name**: property-inspection
+- **Status**: ✅ Live and Active
+- **KV Namespaces**: 
+  - Production: inspection_kv_production
+  - Preview: inspection_kv_preview
+- **Environment Variables**:
+  - GEMINI_API_KEY (secured in Pages settings)
+- **Last Updated**: December 2024
+
+## Development Commands
+```bash
+# Local development
+npm run build:server
+pm2 start ecosystem.config.cjs
+
+# Deploy to production
+npm run build:server
+npx wrangler pages deploy dist --project-name property-inspection
+
+# Check logs
+pm2 logs inspection-platform --nostream
+
+# Test endpoints
+curl http://localhost:3000/api/health
+curl http://localhost:3000/api/gemini/test
+```
+
+## Support & Contact
+- **Company**: Remote Business Partner
+- **Admin**: Admin Team
+- **Platform**: Property Inspection Platform
