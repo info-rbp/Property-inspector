@@ -1,6 +1,5 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
-import { serveStatic } from 'hono/cloudflare-workers'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
 type Bindings = {
@@ -13,8 +12,81 @@ const app = new Hono<{ Bindings: Bindings }>()
 // Enable CORS for all routes
 app.use('*', cors())
 
-// Serve static files from public directory
-app.use('/*', serveStatic({ root: './public' }))
+// Serve the main HTML page
+app.get('/', (c) => {
+  return c.html(`<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Property Inspection Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body>
+    <div id="root">
+      <div class="min-h-screen bg-gray-100 p-4">
+        <div class="max-w-7xl mx-auto">
+          <h1 class="text-3xl font-bold text-gray-800 mb-4">Property Inspection Platform</h1>
+          <p class="text-gray-600 mb-8">Professional property condition reporting system powered by Gemini AI</p>
+          
+          <div class="bg-white rounded-lg shadow p-6 mb-4">
+            <h2 class="text-xl font-semibold mb-4">System Status</h2>
+            <div class="space-y-2">
+              <div class="flex items-center">
+                <span class="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
+                <span>API Server: Online</span>
+              </div>
+              <div class="flex items-center">
+                <span class="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
+                <span>Gemini AI: Ready</span>
+              </div>
+              <div class="flex items-center">
+                <span class="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
+                <span>Storage: Connected</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bg-white rounded-lg shadow p-6 mb-4">
+            <h2 class="text-xl font-semibold mb-4">Features</h2>
+            <ul class="list-disc list-inside space-y-2 text-gray-600">
+              <li>AI-powered property photo analysis</li>
+              <li>Automated condition report generation</li>
+              <li>Room-by-room inspection tracking</li>
+              <li>PDF report export</li>
+              <li>Cloud-based report storage</li>
+            </ul>
+          </div>
+          
+          <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-xl font-semibold mb-4">API Endpoints</h2>
+            <div class="space-y-2">
+              <div class="font-mono text-sm bg-gray-100 p-2 rounded">
+                GET /api/health - Health check
+              </div>
+              <div class="font-mono text-sm bg-gray-100 p-2 rounded">
+                POST /api/gemini/analyze - AI image analysis
+              </div>
+              <div class="font-mono text-sm bg-gray-100 p-2 rounded">
+                GET /api/reports - List all reports
+              </div>
+              <div class="font-mono text-sm bg-gray-100 p-2 rounded">
+                POST /api/reports/save - Save a report
+              </div>
+              <div class="font-mono text-sm bg-gray-100 p-2 rounded">
+                GET /api/reports/:id - Get specific report
+              </div>
+              <div class="font-mono text-sm bg-gray-100 p-2 rounded">
+                DELETE /api/reports/:id - Delete a report
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>`)
+})
 
 // API endpoint for Gemini AI image analysis
 app.post('/api/gemini/analyze', async (c) => {
