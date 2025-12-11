@@ -1,19 +1,4 @@
-import { Hono } from 'hono'
-import { cors } from 'hono/cors'
-import { GoogleGenerativeAI } from '@google/generative-ai'
-
-type Bindings = {
-  GEMINI_API_KEY: string
-  KV: KVNamespace
-}
-
-const app = new Hono<{ Bindings: Bindings }>()
-
-// Enable CORS for all routes
-app.use('*', cors())
-
-// The full React application HTML
-const APP_HTML = `<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
@@ -107,7 +92,7 @@ const APP_HTML = `<!DOCTYPE html>
                 clientName: '',
                 inspectionDate: new Date().toISOString().split('T')[0],
                 tenantName: '',
-                reportType: \`\${reportType} Condition Report\`,
+                reportType: `${reportType} Condition Report`,
                 rooms: []
             });
             
@@ -187,12 +172,12 @@ const APP_HTML = `<!DOCTYPE html>
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
-                                prompt: \`Analyze this \${roomName} photo for a property condition report. Identify:
+                                prompt: `Analyze this ${roomName} photo for a property condition report. Identify:
                                 1. Overall condition (Excellent/Good/Fair/Poor)
                                 2. Any visible defects, damage, or wear
                                 3. Cleanliness issues
                                 4. Items that may need repair or attention
-                                Use Australian English spelling. Be concise but thorough.\`,
+                                Use Australian English spelling. Be concise but thorough.`,
                                 images: [{
                                     data: base64.split(',')[1],
                                     mimeType: photo.file.type
@@ -208,8 +193,8 @@ const APP_HTML = `<!DOCTYPE html>
                                 const updatedRoom = {
                                     ...room,
                                     overallComment: room.overallComment 
-                                        ? \`\${room.overallComment}\\n\\nAI Analysis: \${result.text}\`
-                                        : \`AI Analysis: \${result.text}\`
+                                        ? `${room.overallComment}\n\nAI Analysis: ${result.text}`
+                                        : `AI Analysis: ${result.text}`
                                 };
                                 setReport(prev => ({
                                     ...prev,
@@ -387,10 +372,10 @@ const APP_HTML = `<!DOCTYPE html>
                                     accept="image/*"
                                     onChange={(e) => handlePhotoUpload(room.id, Array.from(e.target.files))}
                                     className="hidden"
-                                    id={\`photo-\${room.id}\`}
+                                    id={`photo-${room.id}`}
                                 />
                                 <label
-                                    htmlFor={\`photo-\${room.id}\`}
+                                    htmlFor={`photo-${room.id}`}
                                     className="inline-block px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 cursor-pointer transition"
                                 >
                                     <i className="fas fa-camera mr-2"></i>
@@ -541,7 +526,7 @@ const APP_HTML = `<!DOCTYPE html>
                                             key={r.id}
                                             className="p-3 bg-gray-50 rounded hover:bg-gray-100 cursor-pointer"
                                             onClick={async () => {
-                                                const response = await fetch(\`/api/reports/\${r.id}\`);
+                                                const response = await fetch(`/api/reports/${r.id}`);
                                                 if (response.ok) {
                                                     const loadedReport = await response.json();
                                                     setReport(loadedReport);
@@ -645,7 +630,7 @@ const APP_HTML = `<!DOCTYPE html>
                                     <p><span className="font-medium">Tenant:</span> {property.tenant || 'Vacant'}</p>
                                     <p><span className="font-medium">Type:</span> {property.type}</p>
                                     <p><span className="font-medium">Beds/Baths:</span> {property.bedrooms}/{property.bathrooms}</p>
-                                    <p><span className="font-medium">Management Fee:</span> \${property.managementFee}/month</p>
+                                    <p><span className="font-medium">Management Fee:</span> ${property.managementFee}/month</p>
                                 </div>
                                 <div className="mt-4 flex gap-2">
                                     <button className="text-blue-600 hover:text-blue-800 text-sm">
@@ -856,11 +841,11 @@ const APP_HTML = `<!DOCTYPE html>
             const NavButton = ({ tool, icon, label }) => (
                 <button 
                     onClick={() => { setActiveTool(tool); setIsMobileMenuOpen(false); }}
-                    className={\`text-sm font-medium transition-colors duration-200 flex items-center gap-2 px-3 py-2 rounded-lg \${
+                    className={`text-sm font-medium transition-colors duration-200 flex items-center gap-2 px-3 py-2 rounded-lg ${
                         activeTool === tool ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                    }\`}
+                    }`}
                 >
-                    <i className={\`\${icon} text-base\`}></i>
+                    <i className={`${icon} text-base`}></i>
                     {label}
                 </button>
             );
@@ -897,7 +882,7 @@ const APP_HTML = `<!DOCTYPE html>
                                         className="p-2 text-gray-600 rounded-lg hover:bg-gray-100"
                                         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                                     >
-                                        <i className={\`fas \${isMobileMenuOpen ? 'fa-times' : 'fa-bars'} text-xl\`}></i>
+                                        <i className={`fas ${isMobileMenuOpen ? 'fa-times' : 'fa-bars'} text-xl`}></i>
                                     </button>
                                 </div>
                             </div>
@@ -1045,152 +1030,4 @@ const APP_HTML = `<!DOCTYPE html>
         ReactDOM.render(<App />, document.getElementById('root'));
     </script>
 </body>
-</html>`;
-
-// Serve the main application
-app.get('/', (c) => {
-  return c.html(APP_HTML);
-});
-
-// API endpoint for Gemini AI image analysis
-app.post('/api/gemini/analyze', async (c) => {
-  const { env } = c
-  
-  try {
-    const body = await c.req.json()
-    const { prompt, images, model = 'gemini-2.0-flash-exp' } = body
-
-    if (!env.GEMINI_API_KEY) {
-      return c.json({ error: 'Gemini API key not configured' }, 401)
-    }
-
-    const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY)
-    const genModel = genAI.getGenerativeModel({ model })
-
-    // Process images - convert base64 to proper format
-    const imageParts = images.map((img: any) => ({
-      inlineData: {
-        mimeType: img.mimeType || 'image/jpeg',
-        data: img.data
-      }
-    }))
-
-    // Generate content
-    const result = await genModel.generateContent({
-      contents: [{
-        role: 'user',
-        parts: [...imageParts, { text: prompt }]
-      }]
-    })
-
-    const response = await result.response
-    const text = response.text()
-
-    return c.json({ text })
-  } catch (error: any) {
-    console.error('Gemini API error:', error)
-    return c.json({ 
-      error: error.message || 'Failed to analyze with Gemini',
-      details: error.toString()
-    }, 500)
-  }
-})
-
-// API endpoint for saving reports
-app.post('/api/reports/save', async (c) => {
-  const { env } = c
-  
-  try {
-    const report = await c.req.json()
-    const key = `report:${report.id}`
-    
-    await env.KV.put(key, JSON.stringify(report), {
-      metadata: {
-        propertyAddress: report.propertyAddress,
-        inspectionDate: report.inspectionDate,
-        createdAt: new Date().toISOString()
-      }
-    })
-
-    return c.json({ success: true, id: report.id })
-  } catch (error: any) {
-    console.error('Save report error:', error)
-    return c.json({ error: 'Failed to save report' }, 500)
-  }
-})
-
-// API endpoint for listing reports
-app.get('/api/reports', async (c) => {
-  const { env } = c
-  
-  try {
-    const list = await env.KV.list({ prefix: 'report:' })
-    const reports = []
-
-    for (const key of list.keys) {
-      if (key.metadata) {
-        reports.push({
-          id: key.name.replace('report:', ''),
-          ...key.metadata
-        })
-      }
-    }
-
-    // Sort by inspection date descending
-    reports.sort((a: any, b: any) => 
-      new Date(b.inspectionDate).getTime() - new Date(a.inspectionDate).getTime()
-    )
-
-    return c.json(reports)
-  } catch (error: any) {
-    console.error('List reports error:', error)
-    return c.json({ error: 'Failed to list reports' }, 500)
-  }
-})
-
-// API endpoint for loading a specific report
-app.get('/api/reports/:id', async (c) => {
-  const { env } = c
-  const id = c.req.param('id')
-  
-  try {
-    const key = `report:${id}`
-    const report = await env.KV.get(key, 'json')
-    
-    if (!report) {
-      return c.json({ error: 'Report not found' }, 404)
-    }
-
-    return c.json(report)
-  } catch (error: any) {
-    console.error('Load report error:', error)
-    return c.json({ error: 'Failed to load report' }, 500)
-  }
-})
-
-// API endpoint for deleting a report
-app.delete('/api/reports/:id', async (c) => {
-  const { env } = c
-  const id = c.req.param('id')
-  
-  try {
-    const key = `report:${id}`
-    await env.KV.delete(key)
-    
-    return c.json({ success: true })
-  } catch (error: any) {
-    console.error('Delete report error:', error)
-    return c.json({ error: 'Failed to delete report' }, 500)
-  }
-})
-
-// Health check
-app.get('/api/health', (c) => {
-  return c.json({ 
-    status: 'ok',
-    service: 'inspection-platform',
-    timestamp: new Date().toISOString()
-  })
-})
-
-export default app
+</html>
