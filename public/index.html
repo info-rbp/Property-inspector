@@ -3,54 +3,525 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Remote Business Partner Property Reports</title>
+    <title>Property Inspection Platform</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/heic2any@0.0.4/dist/heic2any.min.js"></script>
-    <style>
-      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-      
-      body {
-        font-family: 'Inter', sans-serif;
-      }
-
-      /* Print Styles for PDF Generation */
-      @media print {
-        @page {
-          size: A4;
-          margin: 15mm; /* Standard professional document margin */
-        }
-        body {
-          -webkit-print-color-adjust: exact;
-          print-color-adjust: exact;
-          margin: 0;
-          padding: 0;
-        }
-        .no-print {
-          display: none !important;
-        }
-        .page-break {
-          page-break-after: always;
-        }
-        .avoid-break {
-          page-break-inside: avoid;
-        }
-      }
-    </style>
-  <script type="importmap">
-{
-  "imports": {
-    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.32.0",
-    "react/": "https://aistudiocdn.com/react@^19.2.1/",
-    "react": "https://aistudiocdn.com/react@^19.2.1",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/",
-    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.556.0"
-  }
-}
-</script>
-<link rel="stylesheet" href="/index.css">
-</head>
-  <body class="bg-gray-50 text-gray-900">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/idb@8.0.0/build/umd.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  </head>
+  <body>
     <div id="root"></div>
-  <script type="module" src="/index.tsx"></script>
-</body>
+    
+    <script type="text/babel">
+      const { useState, useEffect, useRef } = React;
+      
+      // Utility functions
+      const generateId = () => Math.random().toString(36).substring(2, 15);
+      
+      const ROOM_TYPES = [
+        'Living Room', 'Bedroom', 'Master Bedroom', 'Kitchen', 'Bathroom', 
+        'Ensuite', 'Laundry', 'Garage', 'Front Yard', 'Back Yard', 
+        'Hallway', 'Dining Room', 'Study', 'Entry'
+      ];
+      
+      const getInitialItemsForRoom = (roomType) => {
+        const commonItems = [
+          { name: 'Walls', isClean: true, isUndamaged: true, isWorking: true },
+          { name: 'Ceiling', isClean: true, isUndamaged: true, isWorking: true },
+          { name: 'Flooring', isClean: true, isUndamaged: true, isWorking: true },
+          { name: 'Windows', isClean: true, isUndamaged: true, isWorking: true },
+          { name: 'Light Fittings', isClean: true, isUndamaged: true, isWorking: true },
+          { name: 'Power Points', isClean: true, isUndamaged: true, isWorking: true }
+        ];
+        
+        const roomSpecific = {
+          'Kitchen': [
+            { name: 'Kitchen Benchtop', isClean: true, isUndamaged: true, isWorking: true },
+            { name: 'Sink/Taps', isClean: true, isUndamaged: true, isWorking: true },
+            { name: 'Oven/Stove', isClean: true, isUndamaged: true, isWorking: true },
+            { name: 'Rangehood', isClean: true, isUndamaged: true, isWorking: true },
+            { name: 'Cupboards/Drawers', isClean: true, isUndamaged: true, isWorking: true }
+          ],
+          'Bathroom': [
+            { name: 'Shower', isClean: true, isUndamaged: true, isWorking: true },
+            { name: 'Toilet', isClean: true, isUndamaged: true, isWorking: true },
+            { name: 'Vanity', isClean: true, isUndamaged: true, isWorking: true },
+            { name: 'Mirror', isClean: true, isUndamaged: true, isWorking: true },
+            { name: 'Towel Rails', isClean: true, isUndamaged: true, isWorking: true }
+          ]
+        };
+        
+        return [
+          ...commonItems,
+          ...(roomSpecific[roomType] || [])
+        ].map(item => ({
+          id: generateId(),
+          ...item,
+          comment: ''
+        }));
+      };
+
+      // Main App Component
+      const App = () => {
+        const [report, setReport] = useState({
+          id: generateId(),
+          propertyAddress: '',
+          agentName: 'Admin Team',
+          agentCompany: 'Remote Business Partner',
+          agentAddress: 'Perth, WA',
+          agentPhone: '0400 000 000',
+          agentEmail: 'admin@rbp.com.au',
+          clientName: '',
+          inspectionDate: new Date().toISOString().split('T')[0],
+          tenantName: '',
+          reportType: 'Property Condition Report',
+          rooms: []
+        });
+        
+        const [selectedRoomType, setSelectedRoomType] = useState(ROOM_TYPES[0]);
+        const [newRoomName, setNewRoomName] = useState(ROOM_TYPES[0]);
+        const [isSaving, setIsSaving] = useState(false);
+        const [savedReports, setSavedReports] = useState([]);
+        const [showLoadModal, setShowLoadModal] = useState(false);
+        const [isAnalyzing, setIsAnalyzing] = useState(false);
+        const fileInputRef = useRef(null);
+        
+        const updateReport = (updates) => {
+          setReport(prev => ({ ...prev, ...updates }));
+        };
+        
+        const addRoom = () => {
+          const room = {
+            id: generateId(),
+            name: newRoomName || selectedRoomType,
+            items: getInitialItemsForRoom(selectedRoomType),
+            photos: [],
+            overallComment: ''
+          };
+          
+          setReport(prev => ({
+            ...prev,
+            rooms: [...prev.rooms, room]
+          }));
+        };
+        
+        const removeRoom = (roomId) => {
+          if (confirm('Are you sure you want to remove this room?')) {
+            setReport(prev => ({
+              ...prev,
+              rooms: prev.rooms.filter(r => r.id !== roomId)
+            }));
+          }
+        };
+        
+        const handlePhotoUpload = async (roomId, files) => {
+          const room = report.rooms.find(r => r.id === roomId);
+          if (!room) return;
+          
+          const newPhotos = [];
+          for (const file of files) {
+            const photo = {
+              id: generateId(),
+              file: file,
+              previewUrl: URL.createObjectURL(file),
+              tags: []
+            };
+            newPhotos.push(photo);
+          }
+          
+          const updatedRoom = {
+            ...room,
+            photos: [...room.photos, ...newPhotos]
+          };
+          
+          setReport(prev => ({
+            ...prev,
+            rooms: prev.rooms.map(r => r.id === roomId ? updatedRoom : r)
+          }));
+          
+          // Analyze photos with Gemini if available
+          if (newPhotos.length > 0) {
+            analyzePhotosWithAI(roomId, newPhotos);
+          }
+        };
+        
+        const analyzePhotosWithAI = async (roomId, photos) => {
+          setIsAnalyzing(true);
+          try {
+            for (const photo of photos) {
+              const base64 = await convertToBase64(photo.file);
+              
+              const response = await fetch('/api/gemini/analyze', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  prompt: 'Analyze this property photo and identify the room type and any visible defects or notable features. Return a brief description.',
+                  images: [{
+                    data: base64.split(',')[1],
+                    mimeType: photo.file.type
+                  }]
+                })
+              });
+              
+              if (response.ok) {
+                const result = await response.json();
+                console.log('AI Analysis:', result.text);
+                // Update photo tags or room comments based on analysis
+              }
+            }
+          } catch (error) {
+            console.error('AI analysis failed:', error);
+          } finally {
+            setIsAnalyzing(false);
+          }
+        };
+        
+        const convertToBase64 = (file) => {
+          return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+          });
+        };
+        
+        const saveReport = async () => {
+          if (!report.propertyAddress) {
+            alert('Please enter a property address');
+            return;
+          }
+          
+          setIsSaving(true);
+          try {
+            const response = await fetch('/api/reports/save', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(report)
+            });
+            
+            if (response.ok) {
+              alert('Report saved successfully!');
+            } else {
+              throw new Error('Failed to save');
+            }
+          } catch (error) {
+            alert('Failed to save report: ' + error.message);
+          } finally {
+            setIsSaving(false);
+          }
+        };
+        
+        const loadReports = async () => {
+          try {
+            const response = await fetch('/api/reports');
+            if (response.ok) {
+              const reports = await response.json();
+              setSavedReports(reports);
+              setShowLoadModal(true);
+            }
+          } catch (error) {
+            console.error('Failed to load reports:', error);
+          }
+        };
+        
+        return (
+          <div className="min-h-screen bg-gray-100">
+            <div className="max-w-7xl mx-auto p-4">
+              {/* Header */}
+              <div className="bg-white rounded-lg shadow p-6 mb-6">
+                <h1 className="text-3xl font-bold text-gray-800 mb-2">
+                  <i className="fas fa-clipboard-check mr-2"></i>
+                  Property Inspection Platform
+                </h1>
+                <p className="text-gray-600">AI-Powered Property Condition Reporting</p>
+              </div>
+              
+              {/* Property Details */}
+              <div className="bg-white rounded-lg shadow p-6 mb-6">
+                <h2 className="text-xl font-semibold mb-4">Property Details</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Property Address *
+                    </label>
+                    <input
+                      type="text"
+                      value={report.propertyAddress}
+                      onChange={(e) => updateReport({ propertyAddress: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="123 Main St, City, State"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Client Name
+                    </label>
+                    <input
+                      type="text"
+                      value={report.clientName}
+                      onChange={(e) => updateReport({ clientName: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Tenant Name
+                    </label>
+                    <input
+                      type="text"
+                      value={report.tenantName}
+                      onChange={(e) => updateReport({ tenantName: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Inspection Date
+                    </label>
+                    <input
+                      type="date"
+                      value={report.inspectionDate}
+                      onChange={(e) => updateReport({ inspectionDate: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              {/* Add Room Section */}
+              <div className="bg-white rounded-lg shadow p-6 mb-6">
+                <h2 className="text-xl font-semibold mb-4">Add Room</h2>
+                <div className="flex gap-4">
+                  <select
+                    value={selectedRoomType}
+                    onChange={(e) => {
+                      setSelectedRoomType(e.target.value);
+                      setNewRoomName(e.target.value);
+                    }}
+                    className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    {ROOM_TYPES.map(type => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </select>
+                  <input
+                    type="text"
+                    value={newRoomName}
+                    onChange={(e) => setNewRoomName(e.target.value)}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Room name (optional)"
+                  />
+                  <button
+                    onClick={addRoom}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
+                  >
+                    <i className="fas fa-plus mr-2"></i>
+                    Add Room
+                  </button>
+                </div>
+              </div>
+              
+              {/* Rooms List */}
+              {report.rooms.map(room => (
+                <div key={room.id} className="bg-white rounded-lg shadow p-6 mb-6">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-semibold">{room.name}</h3>
+                    <button
+                      onClick={() => removeRoom(room.id)}
+                      className="text-red-600 hover:text-red-800"
+                    >
+                      <i className="fas fa-trash"></i>
+                    </button>
+                  </div>
+                  
+                  {/* Photo Upload */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Photos ({room.photos.length})
+                    </label>
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={(e) => handlePhotoUpload(room.id, Array.from(e.target.files))}
+                      className="hidden"
+                      ref={fileInputRef}
+                      id={`photo-${room.id}`}
+                    />
+                    <label
+                      htmlFor={`photo-${room.id}`}
+                      className="inline-block px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 cursor-pointer transition"
+                    >
+                      <i className="fas fa-camera mr-2"></i>
+                      Add Photos
+                    </label>
+                    
+                    {/* Photo Preview */}
+                    {room.photos.length > 0 && (
+                      <div className="flex gap-2 mt-2 flex-wrap">
+                        {room.photos.map(photo => (
+                          <img
+                            key={photo.id}
+                            src={photo.previewUrl}
+                            alt="Room photo"
+                            className="w-20 h-20 object-cover rounded"
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Items Checklist */}
+                  <div className="space-y-2">
+                    {room.items.map(item => (
+                      <div key={item.id} className="flex items-center gap-4 p-2 bg-gray-50 rounded">
+                        <span className="flex-1">{item.name}</span>
+                        <label className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={item.isClean}
+                            onChange={(e) => {
+                              const updatedRoom = {
+                                ...room,
+                                items: room.items.map(i =>
+                                  i.id === item.id ? { ...i, isClean: e.target.checked } : i
+                                )
+                              };
+                              setReport(prev => ({
+                                ...prev,
+                                rooms: prev.rooms.map(r => r.id === room.id ? updatedRoom : r)
+                              }));
+                            }}
+                            className="mr-1"
+                          />
+                          Clean
+                        </label>
+                        <label className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={item.isUndamaged}
+                            onChange={(e) => {
+                              const updatedRoom = {
+                                ...room,
+                                items: room.items.map(i =>
+                                  i.id === item.id ? { ...i, isUndamaged: e.target.checked } : i
+                                )
+                              };
+                              setReport(prev => ({
+                                ...prev,
+                                rooms: prev.rooms.map(r => r.id === room.id ? updatedRoom : r)
+                              }));
+                            }}
+                            className="mr-1"
+                          />
+                          Undamaged
+                        </label>
+                        <label className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={item.isWorking}
+                            onChange={(e) => {
+                              const updatedRoom = {
+                                ...room,
+                                items: room.items.map(i =>
+                                  i.id === item.id ? { ...i, isWorking: e.target.checked } : i
+                                )
+                              };
+                              setReport(prev => ({
+                                ...prev,
+                                rooms: prev.rooms.map(r => r.id === room.id ? updatedRoom : r)
+                              }));
+                            }}
+                            className="mr-1"
+                          />
+                          Working
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              
+              {/* Actions */}
+              <div className="bg-white rounded-lg shadow p-6">
+                <div className="flex gap-4">
+                  <button
+                    onClick={saveReport}
+                    disabled={isSaving}
+                    className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition disabled:opacity-50"
+                  >
+                    {isSaving ? (
+                      <>
+                        <i className="fas fa-spinner fa-spin mr-2"></i>
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-save mr-2"></i>
+                        Save Report
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={loadReports}
+                    className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
+                  >
+                    <i className="fas fa-folder-open mr-2"></i>
+                    Load Report
+                  </button>
+                  {isAnalyzing && (
+                    <div className="flex items-center text-blue-600">
+                      <i className="fas fa-robot fa-spin mr-2"></i>
+                      AI Analyzing Photos...
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {/* Load Modal */}
+              {showLoadModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                  <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-96 overflow-y-auto">
+                    <h2 className="text-xl font-semibold mb-4">Load Report</h2>
+                    <div className="space-y-2">
+                      {savedReports.map(r => (
+                        <div
+                          key={r.id}
+                          className="p-3 bg-gray-50 rounded hover:bg-gray-100 cursor-pointer"
+                          onClick={async () => {
+                            const response = await fetch(`/api/reports/${r.id}`);
+                            if (response.ok) {
+                              const loadedReport = await response.json();
+                              setReport(loadedReport);
+                              setShowLoadModal(false);
+                            }
+                          }}
+                        >
+                          <div className="font-medium">{r.propertyAddress || 'Untitled'}</div>
+                          <div className="text-sm text-gray-600">{r.inspectionDate}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => setShowLoadModal(false)}
+                      className="mt-4 px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      };
+      
+      // Render the app
+      ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+  </body>
 </html>

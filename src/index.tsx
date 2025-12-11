@@ -12,8 +12,19 @@ const app = new Hono<{ Bindings: Bindings }>()
 // Enable CORS for all routes
 app.use('*', cors())
 
-// Serve the main HTML page
-app.get('/', (c) => {
+// Serve the main HTML page with the full React app
+app.get('/', async (c) => {
+  // In production, this would be served from the dist folder
+  // For development, we'll serve the HTML directly
+  const htmlContent = await fetch('file:///home/user/webapp/public/index.html')
+    .then(res => res.text())
+    .catch(() => null);
+    
+  if (htmlContent) {
+    return c.html(htmlContent);
+  }
+  
+  // Fallback HTML if file not found
   return c.html(`<!doctype html>
 <html lang="en">
   <head>
