@@ -16,129 +16,539 @@ app.use('*', cors())
 const APP_HTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Remote Business Partner - Property Inspection Platform</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/idb@8.0.0/build/umd.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
     <style>
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+        @media print {
+            @page { 
+                size: A4; 
+                margin: 0;
+            }
+            body * {
+                visibility: hidden;
+            }
+            .print-area, .print-area * {
+                visibility: visible;
+            }
+            .print-area {
+                position: fixed;
+                left: 0;
+                top: 0;
+                width: 100%;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .print\\\\:block {
+                display: block !important;
+            }
+            .print\\\\:p-8 {
+                padding: 2rem !important;
+            }
+            .print\\\\:bg-white {
+                background-color: white !important;
+            }
+            .page-break {
+                page-break-after: always;
+            }
         }
+        
         .animate-in {
-            animation: fadeIn 0.5s ease-out;
+            animation: fade-in 0.3s ease-out;
+        }
+        
+        @keyframes fade-in {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
     </style>
 </head>
 <body>
     <div id="root"></div>
+
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     
+    <!-- Babel Standalone for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- IndexedDB for local storage -->
+    <script src="https://unpkg.com/idb@7.1.1/build/umd.js"></script>
+    
+    <!-- PDF Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
     <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+        const { useState, useEffect, useRef, useCallback } = React;
         
         // Utility functions
-        const generateId = () => Math.random().toString(36).substring(2, 15);
+        const generateId = () => Math.random().toString(36).substr(2, 9);
         
         const ROOM_TYPES = [
-            'Living Room', 'Bedroom', 'Master Bedroom', 'Kitchen', 'Bathroom', 
-            'Ensuite', 'Laundry', 'Garage', 'Front Yard', 'Back Yard', 
-            'Hallway', 'Dining Room', 'Study', 'Entry', 'Balcony', 'Storage'
+            'Living Room', 'Kitchen', 'Master Bedroom', 'Bedroom 2', 'Bedroom 3', 
+            'Bathroom', 'Ensuite', 'Laundry', 'Garage', 'Hallway', 'Study',
+            'Dining Room', 'Powder Room', 'Pantry', 'Front Yard', 'Back Yard',
+            'Balcony', 'Patio', 'Pool Area', 'Storage Room'
         ];
-        
+
         const getInitialItemsForRoom = (roomType) => {
-            const commonItems = [
-                { name: 'Walls', isClean: true, isUndamaged: true, isWorking: true },
-                { name: 'Ceiling', isClean: true, isUndamaged: true, isWorking: true },
-                { name: 'Flooring', isClean: true, isUndamaged: true, isWorking: true },
-                { name: 'Windows', isClean: true, isUndamaged: true, isWorking: true },
-                { name: 'Light Fittings', isClean: true, isUndamaged: true, isWorking: true },
-                { name: 'Power Points', isClean: true, isUndamaged: true, isWorking: true }
-            ];
+            const baseItems = ['Walls', 'Ceiling', 'Flooring', 'Windows', 'Light Fittings', 'Power Points'];
             
-            const roomSpecific = {
-                'Kitchen': [
-                    { name: 'Kitchen Benchtop', isClean: true, isUndamaged: true, isWorking: true },
-                    { name: 'Sink/Taps', isClean: true, isUndamaged: true, isWorking: true },
-                    { name: 'Oven/Stove', isClean: true, isUndamaged: true, isWorking: true },
-                    { name: 'Rangehood', isClean: true, isUndamaged: true, isWorking: true },
-                    { name: 'Cupboards/Drawers', isClean: true, isUndamaged: true, isWorking: true }
-                ],
-                'Bathroom': [
-                    { name: 'Shower', isClean: true, isUndamaged: true, isWorking: true },
-                    { name: 'Toilet', isClean: true, isUndamaged: true, isWorking: true },
-                    { name: 'Vanity', isClean: true, isUndamaged: true, isWorking: true },
-                    { name: 'Mirror', isClean: true, isUndamaged: true, isWorking: true },
-                    { name: 'Towel Rails', isClean: true, isUndamaged: true, isWorking: true }
-                ],
-                'Laundry': [
-                    { name: 'Sink/Taps', isClean: true, isUndamaged: true, isWorking: true },
-                    { name: 'Cabinets', isClean: true, isUndamaged: true, isWorking: true },
-                    { name: 'Washing Machine Taps', isClean: true, isUndamaged: true, isWorking: true }
-                ]
+            const roomSpecificItems = {
+                'Kitchen': ['Oven/Stove', 'Range Hood', 'Dishwasher', 'Sink/Taps', 'Benchtops', 'Cupboards/Drawers', 'Splashback'],
+                'Bathroom': ['Shower', 'Bath', 'Basin/Taps', 'Toilet', 'Mirror', 'Towel Rail', 'Exhaust Fan'],
+                'Ensuite': ['Shower', 'Basin/Taps', 'Toilet', 'Mirror', 'Towel Rail', 'Exhaust Fan'],
+                'Laundry': ['Tub/Sink', 'Taps', 'Washing Machine Taps', 'Dryer Vent'],
+                'Garage': ['Garage Door', 'Remote Controls', 'Shelving'],
+                'Pool Area': ['Pool', 'Pool Fence', 'Pool Equipment', 'Pool Gate'],
             };
             
-            return [
-                ...commonItems,
-                ...(roomSpecific[roomType] || [])
-            ].map(item => ({
-                id: generateId(),
-                ...item,
-                comment: ''
-            }));
+            return [...baseItems, ...(roomSpecificItems[roomType] || [])];
         };
 
-        // ConditionReport Component
-        const ConditionReport = ({ reportType = 'Entry' }) => {
+        // Storage Service
+        const storageService = {
+            async saveReport(report) {
+                try {
+                    const response = await fetch('/api/reports/save', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(report)
+                    });
+                    return await response.json();
+                } catch (error) {
+                    console.error('Error saving report:', error);
+                    throw error;
+                }
+            },
+            
+            async loadReports() {
+                try {
+                    const response = await fetch('/api/reports');
+                    return await response.json();
+                } catch (error) {
+                    console.error('Error loading reports:', error);
+                    return [];
+                }
+            },
+            
+            async deleteReport(id) {
+                try {
+                    const response = await fetch(\`/api/reports/\${id}\`, { method: 'DELETE' });
+                    return await response.json();
+                } catch (error) {
+                    console.error('Error deleting report:', error);
+                    throw error;
+                }
+            }
+        };
+
+        // Gemini Service
+        const geminiService = {
+            async analyzeImage(base64Image, roomType, existingComment = '') {
+                try {
+                    const response = await fetch('/api/gemini/analyze', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            image: base64Image,
+                            roomType,
+                            existingComment
+                        })
+                    });
+                    return await response.json();
+                } catch (error) {
+                    console.error('Error analyzing image:', error);
+                    throw error;
+                }
+            }
+        };
+
+        // Components
+        const RoomForm = ({ room, onUpdate, onDelete }) => {
+            const [isAnalyzing, setIsAnalyzing] = useState(false);
+            const [showAddItem, setShowAddItem] = useState(false);
+            const [newItemName, setNewItemName] = useState('');
+            
+            const handlePhotoUpload = async (e) => {
+                const files = Array.from(e.target.files);
+                const newPhotos = [];
+                
+                for (const file of files) {
+                    const reader = new FileReader();
+                    const base64 = await new Promise(resolve => {
+                        reader.onloadend = () => resolve(reader.result);
+                        reader.readAsDataURL(file);
+                    });
+                    
+                    newPhotos.push({
+                        id: generateId(),
+                        url: base64,
+                        caption: ''
+                    });
+                }
+                
+                const updatedRoom = {
+                    ...room,
+                    photos: [...room.photos, ...newPhotos]
+                };
+                onUpdate(updatedRoom);
+                
+                // Auto-analyze first photo if it's new
+                if (newPhotos.length > 0 && room.photos.length === 0) {
+                    await analyzePhotos(updatedRoom);
+                }
+            };
+            
+            const analyzePhotos = async (roomToAnalyze = room) => {
+                if (roomToAnalyze.photos.length === 0) return;
+                
+                setIsAnalyzing(true);
+                try {
+                    const result = await geminiService.analyzeImage(
+                        roomToAnalyze.photos[0].url,
+                        roomToAnalyze.name,
+                        roomToAnalyze.overallComment
+                    );
+                    
+                    if (result.success) {
+                        const updatedRoom = {
+                            ...roomToAnalyze,
+                            overallComment: result.overallComment || roomToAnalyze.overallComment,
+                            items: roomToAnalyze.items.map(item => {
+                                const itemData = result.items?.[item.name];
+                                if (itemData) {
+                                    return {
+                                        ...item,
+                                        isClean: itemData.isClean !== undefined ? itemData.isClean : item.isClean,
+                                        isUndamaged: itemData.isUndamaged !== undefined ? itemData.isUndamaged : item.isUndamaged,
+                                        isWorking: itemData.isWorking !== undefined ? itemData.isWorking : item.isWorking,
+                                        comment: itemData.comment || item.comment
+                                    };
+                                }
+                                return item;
+                            })
+                        };
+                        onUpdate(updatedRoom);
+                    }
+                } catch (error) {
+                    console.error('Analysis failed:', error);
+                } finally {
+                    setIsAnalyzing(false);
+                }
+            };
+            
+            const updateItem = (itemId, updates) => {
+                const updatedRoom = {
+                    ...room,
+                    items: room.items.map(item => 
+                        item.id === itemId ? { ...item, ...updates } : item
+                    )
+                };
+                onUpdate(updatedRoom);
+            };
+            
+            const deleteItem = (itemId) => {
+                const updatedRoom = {
+                    ...room,
+                    items: room.items.filter(item => item.id !== itemId)
+                };
+                onUpdate(updatedRoom);
+            };
+            
+            const addNewItem = () => {
+                if (!newItemName.trim()) return;
+                
+                const newItem = {
+                    id: generateId(),
+                    name: newItemName,
+                    isClean: true,
+                    isUndamaged: true,
+                    isWorking: true,
+                    comment: ''
+                };
+                
+                const updatedRoom = {
+                    ...room,
+                    items: [...room.items, newItem]
+                };
+                onUpdate(updatedRoom);
+                setNewItemName('');
+                setShowAddItem(false);
+            };
+            
+            const removePhoto = (photoId) => {
+                const updatedRoom = {
+                    ...room,
+                    photos: room.photos.filter(p => p.id !== photoId)
+                };
+                onUpdate(updatedRoom);
+            };
+            
+            const updatePhotoCaption = (photoId, caption) => {
+                const updatedRoom = {
+                    ...room,
+                    photos: room.photos.map(p => 
+                        p.id === photoId ? { ...p, caption } : p
+                    )
+                };
+                onUpdate(updatedRoom);
+            };
+            
+            return (
+                <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-xl font-bold text-gray-800">{room.name}</h3>
+                        <button
+                            onClick={onDelete}
+                            className="text-red-500 hover:text-red-700"
+                        >
+                            <i className="fas fa-trash"></i>
+                        </button>
+                    </div>
+                    
+                    {/* Photo Upload */}
+                    <div className="mb-6">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Photos
+                        </label>
+                        <div className="flex flex-wrap gap-4">
+                            {room.photos.map(photo => (
+                                <div key={photo.id} className="relative">
+                                    <img 
+                                        src={photo.url} 
+                                        alt={room.name}
+                                        className="w-32 h-32 object-cover rounded-lg"
+                                    />
+                                    <button
+                                        onClick={() => removePhoto(photo.id)}
+                                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600"
+                                    >
+                                        <i className="fas fa-times text-xs"></i>
+                                    </button>
+                                </div>
+                            ))}
+                            <label className="w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center cursor-pointer hover:border-gray-400">
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    multiple
+                                    onChange={handlePhotoUpload}
+                                    className="hidden"
+                                />
+                                <div className="text-center">
+                                    <i className="fas fa-plus text-gray-400 text-2xl"></i>
+                                    <p className="text-xs text-gray-500 mt-1">Add Photo</p>
+                                </div>
+                            </label>
+                        </div>
+                        
+                        {room.photos.length > 0 && (
+                            <button
+                                onClick={() => analyzePhotos()}
+                                disabled={isAnalyzing}
+                                className="mt-3 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 disabled:bg-gray-400"
+                            >
+                                {isAnalyzing ? (
+                                    <><i className="fas fa-spinner fa-spin mr-2"></i>Analyzing...</>
+                                ) : (
+                                    <><i className="fas fa-magic mr-2"></i>AI Analysis</>
+                                )}
+                            </button>
+                        )}
+                    </div>
+                    
+                    {/* Items Checklist */}
+                    <div className="mb-4">
+                        <div className="flex justify-between items-center mb-3">
+                            <label className="block text-sm font-medium text-gray-700">
+                                Items Checklist
+                            </label>
+                            <button
+                                onClick={() => setShowAddItem(!showAddItem)}
+                                className="text-blue-500 hover:text-blue-700 text-sm"
+                            >
+                                <i className="fas fa-plus mr-1"></i> Add Item
+                            </button>
+                        </div>
+                        
+                        {showAddItem && (
+                            <div className="flex gap-2 mb-3">
+                                <input
+                                    type="text"
+                                    value={newItemName}
+                                    onChange={(e) => setNewItemName(e.target.value)}
+                                    placeholder="Item name"
+                                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg"
+                                />
+                                <button
+                                    onClick={addNewItem}
+                                    className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600"
+                                >
+                                    Add
+                                </button>
+                            </div>
+                        )}
+                        
+                        <div className="space-y-3">
+                            {room.items.map(item => (
+                                <div key={item.id} className="border border-gray-200 rounded-lg p-4">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <span className="font-medium">{item.name}</span>
+                                        <button
+                                            onClick={() => deleteItem(item.id)}
+                                            className="text-red-500 hover:text-red-700 text-sm"
+                                        >
+                                            <i className="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                    
+                                    <div className="flex gap-4 mb-2">
+                                        <label className="flex items-center">
+                                            <input
+                                                type="checkbox"
+                                                checked={item.isClean}
+                                                onChange={(e) => updateItem(item.id, { isClean: e.target.checked })}
+                                                className="mr-2"
+                                            />
+                                            <span className="text-sm">Clean</span>
+                                        </label>
+                                        <label className="flex items-center">
+                                            <input
+                                                type="checkbox"
+                                                checked={item.isUndamaged}
+                                                onChange={(e) => updateItem(item.id, { isUndamaged: e.target.checked })}
+                                                className="mr-2"
+                                            />
+                                            <span className="text-sm">Undamaged</span>
+                                        </label>
+                                        <label className="flex items-center">
+                                            <input
+                                                type="checkbox"
+                                                checked={item.isWorking}
+                                                onChange={(e) => updateItem(item.id, { isWorking: e.target.checked })}
+                                                className="mr-2"
+                                            />
+                                            <span className="text-sm">Working</span>
+                                        </label>
+                                    </div>
+                                    
+                                    <input
+                                        type="text"
+                                        value={item.comment}
+                                        onChange={(e) => updateItem(item.id, { comment: e.target.value })}
+                                        placeholder="Additional comments..."
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                    
+                    {/* Overall Comment */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Overall Room Comment
+                        </label>
+                        <textarea
+                            value={room.overallComment}
+                            onChange={(e) => onUpdate({ ...room, overallComment: e.target.value })}
+                            rows="3"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                            placeholder="General observations about the room..."
+                        />
+                    </div>
+                </div>
+            );
+        };
+
+        const ConditionReport = ({ reportType }) => {
             const [report, setReport] = useState({
                 id: generateId(),
+                type: reportType,
                 propertyAddress: '',
                 agentName: 'Admin Team',
                 agentCompany: 'Remote Business Partner',
-                agentAddress: 'Perth, WA',
-                agentPhone: '0400 000 000',
-                agentEmail: 'admin@rbp.com.au',
                 clientName: '',
-                inspectionDate: new Date().toISOString().split('T')[0],
                 tenantName: '',
-                reportType: \`\${reportType} Condition Report\`,
+                inspectionDate: new Date().toISOString().split('T')[0],
                 rooms: []
             });
-            
-            const [selectedRoomType, setSelectedRoomType] = useState(ROOM_TYPES[0]);
-            const [newRoomName, setNewRoomName] = useState(ROOM_TYPES[0]);
-            const [isSaving, setIsSaving] = useState(false);
+            const [viewMode, setViewMode] = useState('edit');
+            const [newRoomName, setNewRoomName] = useState('');
             const [savedReports, setSavedReports] = useState([]);
-            const [showLoadModal, setShowLoadModal] = useState(false);
-            const [isAnalyzing, setIsAnalyzing] = useState(false);
+            const [showLoadDialog, setShowLoadDialog] = useState(false);
             
-            const updateReport = (updates) => {
-                setReport(prev => ({ ...prev, ...updates }));
+            useEffect(() => {
+                loadSavedReports();
+            }, []);
+            
+            const loadSavedReports = async () => {
+                const reports = await storageService.loadReports();
+                setSavedReports(reports.filter(r => r.type === reportType));
             };
             
-            const addRoom = () => {
-                const room = {
+            const saveReport = async () => {
+                try {
+                    await storageService.saveReport(report);
+                    alert('Report saved successfully!');
+                    loadSavedReports();
+                } catch (error) {
+                    alert('Failed to save report');
+                }
+            };
+            
+            const loadReport = (reportToLoad) => {
+                setReport(reportToLoad);
+                setShowLoadDialog(false);
+            };
+            
+            const handleAddRoom = (e) => {
+                e.preventDefault();
+                if (!newRoomName.trim()) return;
+                
+                const itemNames = getInitialItemsForRoom(newRoomName);
+                const initialItems = itemNames.map(name => ({
                     id: generateId(),
-                    name: newRoomName || selectedRoomType,
-                    items: getInitialItemsForRoom(selectedRoomType),
+                    name,
+                    isClean: true,
+                    isUndamaged: true,
+                    isWorking: true,
+                    comment: ''
+                }));
+                
+                const newRoom = {
+                    id: generateId(),
+                    name: newRoomName,
+                    items: initialItems,
                     photos: [],
                     overallComment: ''
                 };
                 
+                setReport(prev => ({ ...prev, rooms: [...prev.rooms, newRoom] }));
+                setNewRoomName('');
+            };
+            
+            const updateRoom = (updatedRoom) => {
                 setReport(prev => ({
                     ...prev,
-                    rooms: [...prev.rooms, room]
+                    rooms: prev.rooms.map(r => r.id === updatedRoom.id ? updatedRoom : r)
                 }));
             };
             
-            const removeRoom = (roomId) => {
-                if (confirm('Are you sure you want to remove this room?')) {
+            const deleteRoom = (roomId) => {
+                if (confirm('Are you sure you want to delete this room?')) {
                     setReport(prev => ({
                         ...prev,
                         rooms: prev.rooms.filter(r => r.id !== roomId)
@@ -146,713 +556,313 @@ const APP_HTML = `<!DOCTYPE html>
                 }
             };
             
-            const handlePhotoUpload = async (roomId, files) => {
-                const room = report.rooms.find(r => r.id === roomId);
-                if (!room) return;
-                
-                const newPhotos = [];
-                for (const file of files) {
-                    const photo = {
-                        id: generateId(),
-                        file: file,
-                        previewUrl: URL.createObjectURL(file),
-                        tags: []
-                    };
-                    newPhotos.push(photo);
-                }
-                
-                const updatedRoom = {
-                    ...room,
-                    photos: [...room.photos, ...newPhotos]
-                };
-                
-                setReport(prev => ({
-                    ...prev,
-                    rooms: prev.rooms.map(r => r.id === roomId ? updatedRoom : r)
-                }));
-                
-                // Analyze photos with Gemini if available
-                if (newPhotos.length > 0) {
-                    analyzePhotosWithAI(roomId, newPhotos, room.name);
-                }
-            };
-            
-            const analyzePhotosWithAI = async (roomId, photos, roomName) => {
-                setIsAnalyzing(true);
-                try {
-                    for (const photo of photos) {
-                        const base64 = await convertToBase64(photo.file);
+            if (viewMode === 'preview') {
+                return (
+                    <div className="fixed inset-0 z-50 overflow-auto bg-gray-600 py-8 print:bg-white print:p-0">
+                        <div className="fixed top-4 right-4 flex gap-4 no-print">
+                            <button
+                                onClick={() => window.print()}
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-lg"
+                            >
+                                <i className="fas fa-print mr-2"></i> Print / Save PDF
+                            </button>
+                            <button
+                                onClick={() => setViewMode('edit')}
+                                className="bg-white hover:bg-gray-100 text-gray-800 px-4 py-2 rounded-lg shadow-lg"
+                            >
+                                <i className="fas fa-arrow-left mr-2"></i> Back to Edit
+                            </button>
+                        </div>
                         
-                        const response = await fetch('/api/gemini/analyze', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                prompt: \`Analyze this \${roomName} photo for a property condition report. Identify:
-                                1. Overall condition (Excellent/Good/Fair/Poor)
-                                2. Any visible defects, damage, or wear
-                                3. Cleanliness issues
-                                4. Items that may need repair or attention
-                                Use Australian English spelling. Be concise but thorough.\`,
-                                images: [{
-                                    data: base64.split(',')[1],
-                                    mimeType: photo.file.type
-                                }]
-                            })
-                        });
-                        
-                        if (response.ok) {
-                            const result = await response.json();
-                            // Update room comment with AI analysis
-                            const room = report.rooms.find(r => r.id === roomId);
-                            if (room) {
-                                const updatedRoom = {
-                                    ...room,
-                                    overallComment: room.overallComment 
-                                        ? \`\${room.overallComment}\\n\\nAI Analysis: \${result.text}\`
-                                        : \`AI Analysis: \${result.text}\`
-                                };
-                                setReport(prev => ({
-                                    ...prev,
-                                    rooms: prev.rooms.map(r => r.id === roomId ? updatedRoom : r)
-                                }));
-                            }
-                        }
-                    }
-                } catch (error) {
-                    console.error('AI analysis failed:', error);
-                } finally {
-                    setIsAnalyzing(false);
-                }
-            };
-            
-            const convertToBase64 = (file) => {
-                return new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.readAsDataURL(file);
-                    reader.onload = () => resolve(reader.result);
-                    reader.onerror = reject;
-                });
-            };
-            
-            const saveReport = async () => {
-                if (!report.propertyAddress) {
-                    alert('Please enter a property address');
-                    return;
-                }
-                
-                setIsSaving(true);
-                try {
-                    const response = await fetch('/api/reports/save', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(report)
-                    });
-                    
-                    if (response.ok) {
-                        alert('Report saved successfully!');
-                    } else {
-                        throw new Error('Failed to save');
-                    }
-                } catch (error) {
-                    alert('Failed to save report: ' + error.message);
-                } finally {
-                    setIsSaving(false);
-                }
-            };
-            
-            const loadReports = async () => {
-                try {
-                    const response = await fetch('/api/reports');
-                    if (response.ok) {
-                        const reports = await response.json();
-                        setSavedReports(reports.filter(r => r.reportType && r.reportType.includes(reportType)));
-                        setShowLoadModal(true);
-                    }
-                } catch (error) {
-                    console.error('Failed to load reports:', error);
-                }
-            };
+                        <div className="max-w-4xl mx-auto bg-white p-8 shadow-2xl print-area print:shadow-none">
+                            <PDFPreview report={report} />
+                        </div>
+                    </div>
+                );
+            }
             
             return (
-                <div className="max-w-7xl mx-auto p-4 animate-in">
-                    <div className="bg-white rounded-lg shadow p-6 mb-6">
-                        <h1 className="text-2xl font-bold text-gray-800 mb-2">
+                <div className="max-w-6xl mx-auto px-4 py-8">
+                    {/* Header */}
+                    <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+                        <h2 className="text-2xl font-bold mb-6 text-gray-800">
                             {reportType} Condition Report
-                        </h1>
-                        <p className="text-gray-600">Create a comprehensive property condition report with AI assistance</p>
-                    </div>
-                    
-                    <div className="bg-white rounded-lg shadow p-6 mb-6">
-                        <h2 className="text-xl font-semibold mb-4">Property Details</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        </h2>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Property Address *
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Property Address <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     type="text"
                                     value={report.propertyAddress}
-                                    onChange={(e) => updateReport({ propertyAddress: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    placeholder="123 Main St, City, State"
+                                    onChange={(e) => setReport(prev => ({ ...prev, propertyAddress: e.target.value }))}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                    placeholder="123 Main St, Suburb, State"
                                 />
                             </div>
+                            
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Client/Owner Name
-                                </label>
-                                <input
-                                    type="text"
-                                    value={report.clientName}
-                                    onChange={(e) => updateReport({ clientName: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Tenant Name
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    {reportType === 'Entry' ? 'Tenant Name' : 'Current Tenant'}
                                 </label>
                                 <input
                                     type="text"
                                     value={report.tenantName}
-                                    onChange={(e) => updateReport({ tenantName: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    onChange={(e) => setReport(prev => ({ ...prev, tenantName: e.target.value }))}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                    placeholder="John Smith"
                                 />
                             </div>
+                            
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Owner/Landlord
+                                </label>
+                                <input
+                                    type="text"
+                                    value={report.clientName}
+                                    onChange={(e) => setReport(prev => ({ ...prev, clientName: e.target.value }))}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                    placeholder="Property Owner Name"
+                                />
+                            </div>
+                            
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
                                     Inspection Date
                                 </label>
                                 <input
                                     type="date"
                                     value={report.inspectionDate}
-                                    onChange={(e) => updateReport({ inspectionDate: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    onChange={(e) => setReport(prev => ({ ...prev, inspectionDate: e.target.value }))}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                                 />
                             </div>
                         </div>
-                    </div>
-                    
-                    <div className="bg-white rounded-lg shadow p-6 mb-6">
-                        <h2 className="text-xl font-semibold mb-4">Add Room</h2>
-                        <div className="flex gap-4">
-                            <select
-                                value={selectedRoomType}
-                                onChange={(e) => {
-                                    setSelectedRoomType(e.target.value);
-                                    setNewRoomName(e.target.value);
-                                }}
-                                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                                {ROOM_TYPES.map(type => (
-                                    <option key={type} value={type}>{type}</option>
-                                ))}
-                            </select>
-                            <input
-                                type="text"
-                                value={newRoomName}
-                                onChange={(e) => setNewRoomName(e.target.value)}
-                                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="Room name (optional)"
-                            />
+                        
+                        <div className="mt-6 flex gap-4">
                             <button
-                                onClick={addRoom}
-                                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
+                                onClick={saveReport}
+                                className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600"
                             >
-                                <i className="fas fa-plus mr-2"></i>
-                                Add Room
+                                <i className="fas fa-save mr-2"></i> Save Report
+                            </button>
+                            <button
+                                onClick={() => setShowLoadDialog(true)}
+                                className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600"
+                            >
+                                <i className="fas fa-folder-open mr-2"></i> Load Report
+                            </button>
+                            <button
+                                onClick={() => setViewMode('preview')}
+                                disabled={!report.propertyAddress}
+                                className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 disabled:bg-gray-400"
+                            >
+                                <i className="fas fa-eye mr-2"></i> Preview
                             </button>
                         </div>
                     </div>
                     
+                    {/* Add Room Section */}
+                    <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+                        <h3 className="text-lg font-bold mb-4">Add Room</h3>
+                        <form onSubmit={handleAddRoom} className="flex gap-4">
+                            <select
+                                value={newRoomName}
+                                onChange={(e) => setNewRoomName(e.target.value)}
+                                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg"
+                            >
+                                <option value="">Select a room type...</option>
+                                {ROOM_TYPES.map(room => (
+                                    <option key={room} value={room}>{room}</option>
+                                ))}
+                            </select>
+                            <button
+                                type="submit"
+                                disabled={!newRoomName}
+                                className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 disabled:bg-gray-400"
+                            >
+                                <i className="fas fa-plus mr-2"></i> Add Room
+                            </button>
+                        </form>
+                    </div>
+                    
+                    {/* Rooms List */}
                     {report.rooms.map(room => (
-                        <div key={room.id} className="bg-white rounded-lg shadow p-6 mb-6">
-                            <div className="flex justify-between items-center mb-4">
-                                <h3 className="text-lg font-semibold">{room.name}</h3>
-                                <button
-                                    onClick={() => removeRoom(room.id)}
-                                    className="text-red-600 hover:text-red-800"
-                                >
-                                    <i className="fas fa-trash"></i>
-                                </button>
-                            </div>
-                            
-                            <div className="mb-4">
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Photos ({room.photos.length})
-                                </label>
-                                <input
-                                    type="file"
-                                    multiple
-                                    accept="image/*"
-                                    onChange={(e) => handlePhotoUpload(room.id, Array.from(e.target.files))}
-                                    className="hidden"
-                                    id={\`photo-\${room.id}\`}
-                                />
-                                <label
-                                    htmlFor={\`photo-\${room.id}\`}
-                                    className="inline-block px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 cursor-pointer transition"
-                                >
-                                    <i className="fas fa-camera mr-2"></i>
-                                    Add Photos
-                                </label>
-                                
-                                {room.photos.length > 0 && (
-                                    <div className="flex gap-2 mt-2 flex-wrap">
-                                        {room.photos.map(photo => (
-                                            <img
-                                                key={photo.id}
-                                                src={photo.previewUrl}
-                                                alt="Room photo"
-                                                className="w-20 h-20 object-cover rounded"
-                                            />
+                        <RoomForm
+                            key={room.id}
+                            room={room}
+                            onUpdate={updateRoom}
+                            onDelete={() => deleteRoom(room.id)}
+                        />
+                    ))}
+                    
+                    {/* Load Dialog */}
+                    {showLoadDialog && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                            <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-96 overflow-y-auto">
+                                <h3 className="text-lg font-bold mb-4">Load {reportType} Report</h3>
+                                {savedReports.length === 0 ? (
+                                    <p className="text-gray-500">No saved reports found.</p>
+                                ) : (
+                                    <div className="space-y-2">
+                                        {savedReports.map(savedReport => (
+                                            <div
+                                                key={savedReport.id}
+                                                onClick={() => loadReport(savedReport)}
+                                                className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer"
+                                            >
+                                                <div className="font-medium">{savedReport.propertyAddress}</div>
+                                                <div className="text-sm text-gray-500">
+                                                    {savedReport.tenantName} • {savedReport.inspectionDate}
+                                                </div>
+                                            </div>
                                         ))}
                                     </div>
                                 )}
+                                <button
+                                    onClick={() => setShowLoadDialog(false)}
+                                    className="mt-4 bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600"
+                                >
+                                    Close
+                                </button>
                             </div>
-                            
-                            {room.overallComment && (
-                                <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        AI Analysis & Comments
-                                    </label>
-                                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{room.overallComment}</p>
-                                </div>
-                            )}
-                            
-                            <div className="space-y-2">
-                                {room.items.map(item => (
-                                    <div key={item.id} className="flex items-center gap-4 p-2 bg-gray-50 rounded">
-                                        <span className="flex-1 font-medium">{item.name}</span>
-                                        <label className="flex items-center">
-                                            <input
-                                                type="checkbox"
-                                                checked={item.isClean}
-                                                onChange={(e) => {
-                                                    const updatedRoom = {
-                                                        ...room,
-                                                        items: room.items.map(i =>
-                                                            i.id === item.id ? { ...i, isClean: e.target.checked } : i
-                                                        )
-                                                    };
-                                                    setReport(prev => ({
-                                                        ...prev,
-                                                        rooms: prev.rooms.map(r => r.id === room.id ? updatedRoom : r)
-                                                    }));
-                                                }}
-                                                className="mr-1"
-                                            />
-                                            Clean
-                                        </label>
-                                        <label className="flex items-center">
-                                            <input
-                                                type="checkbox"
-                                                checked={item.isUndamaged}
-                                                onChange={(e) => {
-                                                    const updatedRoom = {
-                                                        ...room,
-                                                        items: room.items.map(i =>
-                                                            i.id === item.id ? { ...i, isUndamaged: e.target.checked } : i
-                                                        )
-                                                    };
-                                                    setReport(prev => ({
-                                                        ...prev,
-                                                        rooms: prev.rooms.map(r => r.id === room.id ? updatedRoom : r)
-                                                    }));
-                                                }}
-                                                className="mr-1"
-                                            />
-                                            Undamaged
-                                        </label>
-                                        <label className="flex items-center">
-                                            <input
-                                                type="checkbox"
-                                                checked={item.isWorking}
-                                                onChange={(e) => {
-                                                    const updatedRoom = {
-                                                        ...room,
-                                                        items: room.items.map(i =>
-                                                            i.id === item.id ? { ...i, isWorking: e.target.checked } : i
-                                                        )
-                                                    };
-                                                    setReport(prev => ({
-                                                        ...prev,
-                                                        rooms: prev.rooms.map(r => r.id === room.id ? updatedRoom : r)
-                                                    }));
-                                                }}
-                                                className="mr-1"
-                                            />
-                                            Working
-                                        </label>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const PDFPreview = ({ report }) => {
+            const getStatusBadge = (item) => {
+                if (!item.isClean || !item.isUndamaged || !item.isWorking) {
+                    return <span className="text-red-600 font-medium">Attention Required</span>;
+                }
+                return <span className="text-green-600">Good Condition</span>;
+            };
+            
+            return (
+                <div className="bg-white">
+                    {/* Header */}
+                    <div className="border-b-2 border-gray-800 pb-4 mb-6">
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <h1 className="text-3xl font-bold text-gray-900">
+                                    {report.type} Condition Report
+                                </h1>
+                                <p className="text-gray-600 mt-2">{report.propertyAddress}</p>
+                            </div>
+                            <div className="text-right">
+                                <p className="font-bold text-lg">{report.agentCompany}</p>
+                                <p className="text-sm text-gray-600">{report.agentName}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {/* Details */}
+                    <div className="grid grid-cols-2 gap-4 mb-8">
+                        <div>
+                            <span className="font-semibold">Owner/Landlord:</span> {report.clientName || 'Not specified'}
+                        </div>
+                        <div>
+                            <span className="font-semibold">Tenant:</span> {report.tenantName || 'Not specified'}
+                        </div>
+                        <div>
+                            <span className="font-semibold">Inspection Date:</span> {report.inspectionDate}
+                        </div>
+                        <div>
+                            <span className="font-semibold">Report Type:</span> {report.type} Inspection
+                        </div>
+                    </div>
+                    
+                    {/* Rooms */}
+                    {report.rooms.map((room, idx) => (
+                        <div key={room.id} className={idx > 0 ? 'page-break' : ''}>
+                            <div className="mb-8">
+                                <h2 className="text-2xl font-bold text-gray-800 mb-4 border-b pb-2">
+                                    {room.name}
+                                </h2>
+                                
+                                {/* Photos */}
+                                {room.photos.length > 0 && (
+                                    <div className="mb-6">
+                                        <div className="grid grid-cols-3 gap-4">
+                                            {room.photos.slice(0, 6).map(photo => (
+                                                <div key={photo.id}>
+                                                    <img 
+                                                        src={photo.url} 
+                                                        alt={room.name}
+                                                        className="w-full h-32 object-cover rounded"
+                                                    />
+                                                    {photo.caption && (
+                                                        <p className="text-xs text-gray-600 mt-1">{photo.caption}</p>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
-                                ))}
+                                )}
+                                
+                                {/* Items */}
+                                <div className="mb-4">
+                                    <table className="w-full text-sm">
+                                        <thead>
+                                            <tr className="border-b">
+                                                <th className="text-left py-2">Item</th>
+                                                <th className="text-center py-2">Clean</th>
+                                                <th className="text-center py-2">Undamaged</th>
+                                                <th className="text-center py-2">Working</th>
+                                                <th className="text-left py-2">Comment</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {room.items.map(item => (
+                                                <tr key={item.id} className="border-b">
+                                                    <td className="py-2 font-medium">{item.name}</td>
+                                                    <td className="text-center py-2">
+                                                        {item.isClean ? '✓' : '✗'}
+                                                    </td>
+                                                    <td className="text-center py-2">
+                                                        {item.isUndamaged ? '✓' : '✗'}
+                                                    </td>
+                                                    <td className="text-center py-2">
+                                                        {item.isWorking ? '✓' : '✗'}
+                                                    </td>
+                                                    <td className="py-2 text-gray-600">{item.comment}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                
+                                {/* Overall Comment */}
+                                {room.overallComment && (
+                                    <div className="bg-gray-50 p-4 rounded">
+                                        <h4 className="font-semibold mb-2">Overall Room Condition:</h4>
+                                        <p className="text-gray-700">{room.overallComment}</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     ))}
                     
-                    <div className="bg-white rounded-lg shadow p-6">
-                        <div className="flex gap-4">
-                            <button
-                                onClick={saveReport}
-                                disabled={isSaving}
-                                className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition disabled:opacity-50"
-                            >
-                                {isSaving ? (
-                                    <>
-                                        <i className="fas fa-spinner fa-spin mr-2"></i>
-                                        Saving...
-                                    </>
-                                ) : (
-                                    <>
-                                        <i className="fas fa-save mr-2"></i>
-                                        Save Report
-                                    </>
-                                )}
-                            </button>
-                            <button
-                                onClick={loadReports}
-                                className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-                            >
-                                <i className="fas fa-folder-open mr-2"></i>
-                                Load Report
-                            </button>
-                            <button
-                                className="px-6 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition"
-                            >
-                                <i className="fas fa-file-pdf mr-2"></i>
-                                Export PDF
-                            </button>
-                            {isAnalyzing && (
-                                <div className="flex items-center text-blue-600">
-                                    <i className="fas fa-robot fa-spin mr-2"></i>
-                                    AI Analyzing Photos...
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                    
-                    {showLoadModal && (
-                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                            <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-96 overflow-y-auto">
-                                <h2 className="text-xl font-semibold mb-4">Load {reportType} Report</h2>
-                                <div className="space-y-2">
-                                    {savedReports.map(r => (
-                                        <div
-                                            key={r.id}
-                                            className="p-3 bg-gray-50 rounded hover:bg-gray-100 cursor-pointer"
-                                            onClick={async () => {
-                                                const response = await fetch(\`/api/reports/\${r.id}\`);
-                                                if (response.ok) {
-                                                    const loadedReport = await response.json();
-                                                    setReport(loadedReport);
-                                                    setShowLoadModal(false);
-                                                }
-                                            }}
-                                        >
-                                            <div className="font-medium">{r.propertyAddress || 'Untitled'}</div>
-                                            <div className="text-sm text-gray-600">{r.inspectionDate}</div>
-                                        </div>
-                                    ))}
-                                </div>
-                                <button
-                                    onClick={() => setShowLoadModal(false)}
-                                    className="mt-4 px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
-                                >
-                                    Cancel
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            );
-        };
-
-        // ClientManager Component
-        const ClientManager = () => {
-            const [properties, setProperties] = useState([]);
-            const [showAddModal, setShowAddModal] = useState(false);
-            const [newProperty, setNewProperty] = useState({
-                address: '',
-                owner: '',
-                tenant: '',
-                type: 'House',
-                bedrooms: '',
-                bathrooms: '',
-                managementFee: ''
-            });
-
-            useEffect(() => {
-                loadProperties();
-            }, []);
-
-            const loadProperties = async () => {
-                // In a real app, this would load from the API
-                const savedProps = localStorage.getItem('properties');
-                if (savedProps) {
-                    setProperties(JSON.parse(savedProps));
-                }
-            };
-
-            const saveProperty = () => {
-                if (!newProperty.address) {
-                    alert('Please enter property address');
-                    return;
-                }
-                const property = {
-                    ...newProperty,
-                    id: generateId(),
-                    createdAt: new Date().toISOString()
-                };
-                const updatedProperties = [...properties, property];
-                setProperties(updatedProperties);
-                localStorage.setItem('properties', JSON.stringify(updatedProperties));
-                setNewProperty({
-                    address: '',
-                    owner: '',
-                    tenant: '',
-                    type: 'House',
-                    bedrooms: '',
-                    bathrooms: '',
-                    managementFee: ''
-                });
-                setShowAddModal(false);
-            };
-
-            return (
-                <div className="max-w-7xl mx-auto p-4 animate-in">
-                    <div className="bg-white rounded-lg shadow p-6 mb-6">
-                        <div className="flex justify-between items-center">
-                            <div>
-                                <h1 className="text-2xl font-bold text-gray-800 mb-2">Property Management</h1>
-                                <p className="text-gray-600">Manage your property portfolio</p>
-                            </div>
-                            <button
-                                onClick={() => setShowAddModal(true)}
-                                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-                            >
-                                <i className="fas fa-plus mr-2"></i>
-                                Add Property
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {properties.map(property => (
-                            <div key={property.id} className="bg-white rounded-lg shadow p-6">
-                                <h3 className="font-bold text-lg mb-2">{property.address}</h3>
-                                <div className="space-y-1 text-sm text-gray-600">
-                                    <p><span className="font-medium">Owner:</span> {property.owner}</p>
-                                    <p><span className="font-medium">Tenant:</span> {property.tenant || 'Vacant'}</p>
-                                    <p><span className="font-medium">Type:</span> {property.type}</p>
-                                    <p><span className="font-medium">Beds/Baths:</span> {property.bedrooms}/{property.bathrooms}</p>
-                                    <p><span className="font-medium">Management Fee:</span> \${property.managementFee}/month</p>
-                                </div>
-                                <div className="mt-4 flex gap-2">
-                                    <button className="text-blue-600 hover:text-blue-800 text-sm">
-                                        <i className="fas fa-edit mr-1"></i>Edit
-                                    </button>
-                                    <button className="text-red-600 hover:text-red-800 text-sm">
-                                        <i className="fas fa-trash mr-1"></i>Delete
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-
-                    {showAddModal && (
-                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                            <div className="bg-white rounded-lg p-6 max-w-md w-full">
-                                <h2 className="text-xl font-semibold mb-4">Add New Property</h2>
-                                <div className="space-y-4">
-                                    <input
-                                        type="text"
-                                        placeholder="Property Address"
-                                        value={newProperty.address}
-                                        onChange={(e) => setNewProperty({...newProperty, address: e.target.value})}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                                    />
-                                    <input
-                                        type="text"
-                                        placeholder="Owner Name"
-                                        value={newProperty.owner}
-                                        onChange={(e) => setNewProperty({...newProperty, owner: e.target.value})}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                                    />
-                                    <input
-                                        type="text"
-                                        placeholder="Tenant Name (optional)"
-                                        value={newProperty.tenant}
-                                        onChange={(e) => setNewProperty({...newProperty, tenant: e.target.value})}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                                    />
-                                    <select
-                                        value={newProperty.type}
-                                        onChange={(e) => setNewProperty({...newProperty, type: e.target.value})}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                                    >
-                                        <option value="House">House</option>
-                                        <option value="Apartment">Apartment</option>
-                                        <option value="Townhouse">Townhouse</option>
-                                        <option value="Villa">Villa</option>
-                                    </select>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <input
-                                            type="number"
-                                            placeholder="Bedrooms"
-                                            value={newProperty.bedrooms}
-                                            onChange={(e) => setNewProperty({...newProperty, bedrooms: e.target.value})}
-                                            className="px-3 py-2 border border-gray-300 rounded-md"
-                                        />
-                                        <input
-                                            type="number"
-                                            placeholder="Bathrooms"
-                                            value={newProperty.bathrooms}
-                                            onChange={(e) => setNewProperty({...newProperty, bathrooms: e.target.value})}
-                                            className="px-3 py-2 border border-gray-300 rounded-md"
-                                        />
-                                    </div>
-                                    <input
-                                        type="number"
-                                        placeholder="Management Fee (per month)"
-                                        value={newProperty.managementFee}
-                                        onChange={(e) => setNewProperty({...newProperty, managementFee: e.target.value})}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                                    />
-                                </div>
-                                <div className="mt-6 flex gap-4">
-                                    <button
-                                        onClick={saveProperty}
-                                        className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                                    >
-                                        Save Property
-                                    </button>
-                                    <button
-                                        onClick={() => setShowAddModal(false)}
-                                        className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
-                                    >
-                                        Cancel
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            );
-        };
-
-        // Settings Component
-        const Settings = () => {
-            const [settings, setSettings] = useState({
-                companyName: 'Remote Business Partner',
-                agentName: 'Admin Team',
-                agentEmail: 'admin@rbp.com.au',
-                agentPhone: '0400 000 000',
-                agentAddress: 'Perth, WA',
-                geminiApiKey: ''
-            });
-
-            const saveSettings = () => {
-                localStorage.setItem('appSettings', JSON.stringify(settings));
-                alert('Settings saved successfully!');
-            };
-
-            useEffect(() => {
-                const saved = localStorage.getItem('appSettings');
-                if (saved) {
-                    setSettings(JSON.parse(saved));
-                }
-            }, []);
-
-            return (
-                <div className="max-w-4xl mx-auto p-4 animate-in">
-                    <div className="bg-white rounded-lg shadow p-6 mb-6">
-                        <h1 className="text-2xl font-bold text-gray-800 mb-2">Settings</h1>
-                        <p className="text-gray-600">Configure your application settings</p>
-                    </div>
-
-                    <div className="bg-white rounded-lg shadow p-6">
-                        <h2 className="text-xl font-semibold mb-4">Company Information</h2>
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
-                                <input
-                                    type="text"
-                                    value={settings.companyName}
-                                    onChange={(e) => setSettings({...settings, companyName: e.target.value})}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Agent Name</label>
-                                <input
-                                    type="text"
-                                    value={settings.agentName}
-                                    onChange={(e) => setSettings({...settings, agentName: e.target.value})}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                                <input
-                                    type="email"
-                                    value={settings.agentEmail}
-                                    onChange={(e) => setSettings({...settings, agentEmail: e.target.value})}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                                <input
-                                    type="text"
-                                    value={settings.agentPhone}
-                                    onChange={(e) => setSettings({...settings, agentPhone: e.target.value})}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                                <input
-                                    type="text"
-                                    value={settings.agentAddress}
-                                    onChange={(e) => setSettings({...settings, agentAddress: e.target.value})}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                                />
-                            </div>
-                            <button
-                                onClick={saveSettings}
-                                className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-                            >
-                                <i className="fas fa-save mr-2"></i>
-                                Save Settings
-                            </button>
-                        </div>
+                    {/* Footer */}
+                    <div className="mt-12 pt-6 border-t-2 border-gray-800">
+                        <p className="text-sm text-gray-600 text-center">
+                            This report was generated on {new Date().toLocaleDateString()} by {report.agentCompany}
+                        </p>
                     </div>
                 </div>
             );
         };
 
-        // Main App Component with Dashboard
+        // Main App Component
         const App = () => {
             const [activeTool, setActiveTool] = useState('dashboard');
             const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-            const getActiveComponent = () => {
-                switch (activeTool) {
-                    case 'condition-report':
-                        return <ConditionReport key="entry" reportType="Entry" />;
-                    case 'routine-inspection':
-                        return <ConditionReport key="routine" reportType="Routine" />;
-                    case 'exit-inspection':
-                        return <ConditionReport key="exit" reportType="Exit" />;
-                    case 'clients':
-                        return <ClientManager />;
-                    case 'settings':
-                        return <Settings />;
-                    default:
-                        return null;
-                }
-            };
-
+            
             const NavButton = ({ tool, icon, label }) => (
                 <button 
                     onClick={() => { setActiveTool(tool); setIsMobileMenuOpen(false); }}
@@ -860,177 +870,127 @@ const APP_HTML = `<!DOCTYPE html>
                         activeTool === tool ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                     }\`}
                 >
-                    <i className={\`\${icon} text-base\`}></i>
+                    <i className={\`\${icon}\`}></i>
                     {label}
                 </button>
             );
-
+            
+            const getActiveComponent = () => {
+                switch (activeTool) {
+                    case 'entry-report':
+                        return <ConditionReport key="entry" reportType="Entry" />;
+                    case 'routine-inspection':
+                        return <ConditionReport key="routine" reportType="Routine" />;
+                    case 'exit-inspection':
+                        return <ConditionReport key="exit" reportType="Exit" />;
+                    default:
+                        return null;
+                }
+            };
+            
             return (
                 <div className="min-h-screen bg-gray-50 flex flex-col">
-                    {/* Top Navigation Bar */}
+                    {/* Top Navigation */}
                     <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
                         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                             <div className="flex justify-between h-16 items-center">
                                 {/* Logo */}
                                 <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveTool('dashboard')}>
-                                    <div className="w-9 h-9 bg-blue-800 rounded-lg text-white flex items-center justify-center font-bold text-lg shadow-sm">
+                                    <div className="w-9 h-9 bg-blue-800 rounded-lg text-white flex items-center justify-center font-bold text-lg">
                                         RB
                                     </div>
-                                    <span className="font-bold text-xl text-gray-900 tracking-tight">Remote Business Partner</span>
+                                    <span className="font-bold text-xl text-gray-900">Remote Business Partner</span>
                                 </div>
-
+                                
                                 {/* Desktop Navigation */}
-                                <nav className="hidden xl:flex items-center gap-2">
-                                    <NavButton tool="dashboard" icon="fas fa-th-large" label="Dashboard" />
+                                <nav className="hidden md:flex items-center gap-2">
+                                    <NavButton tool="dashboard" icon="fas fa-home" label="Dashboard" />
                                     <div className="h-6 w-px bg-gray-200 mx-2"></div>
-                                    <NavButton tool="condition-report" icon="fas fa-file-alt" label="Entry Report" />
+                                    <NavButton tool="entry-report" icon="fas fa-file-alt" label="Entry Report" />
                                     <NavButton tool="routine-inspection" icon="fas fa-clipboard-check" label="Routine" />
                                     <NavButton tool="exit-inspection" icon="fas fa-sign-out-alt" label="Exit" />
-                                    <div className="h-6 w-px bg-gray-200 mx-2"></div>
-                                    <NavButton tool="clients" icon="fas fa-building" label="Properties" />
-                                    <NavButton tool="settings" icon="fas fa-cog" label="Settings" />
                                 </nav>
-
+                                
                                 {/* Mobile Menu Toggle */}
-                                <div className="flex items-center gap-4 xl:hidden">
-                                    <button 
-                                        className="p-2 text-gray-600 rounded-lg hover:bg-gray-100"
-                                        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                                    >
-                                        <i className={\`fas \${isMobileMenuOpen ? 'fa-times' : 'fa-bars'} text-xl\`}></i>
-                                    </button>
-                                </div>
+                                <button 
+                                    className="md:hidden p-2 text-gray-600 rounded-lg hover:bg-gray-100"
+                                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                                >
+                                    <i className={\`fas \${isMobileMenuOpen ? 'fa-times' : 'fa-bars'}\`}></i>
+                                </button>
                             </div>
                         </div>
-
+                        
                         {/* Mobile Menu */}
                         {isMobileMenuOpen && (
-                            <div className="xl:hidden bg-white border-t border-gray-200 px-4 pt-2 pb-4 shadow-lg absolute w-full z-50">
+                            <div className="md:hidden bg-white border-t border-gray-200 px-4 py-2 shadow-lg">
                                 <div className="flex flex-col gap-2">
-                                    <NavButton tool="dashboard" icon="fas fa-th-large" label="Dashboard" />
-                                    <NavButton tool="condition-report" icon="fas fa-file-alt" label="Entry Report" />
+                                    <NavButton tool="dashboard" icon="fas fa-home" label="Dashboard" />
+                                    <NavButton tool="entry-report" icon="fas fa-file-alt" label="Entry Report" />
                                     <NavButton tool="routine-inspection" icon="fas fa-clipboard-check" label="Routine Inspection" />
                                     <NavButton tool="exit-inspection" icon="fas fa-sign-out-alt" label="Exit Inspection" />
-                                    <NavButton tool="clients" icon="fas fa-building" label="Properties" />
-                                    <NavButton tool="settings" icon="fas fa-cog" label="Settings" />
                                 </div>
                             </div>
                         )}
                     </header>
-
-                    {/* Main Content Area */}
+                    
+                    {/* Main Content */}
                     <main className="flex-1">
                         {activeTool === 'dashboard' ? (
-                            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 animate-in">
+                            <div className="max-w-7xl mx-auto px-4 py-10 animate-in">
                                 <div className="mb-10 text-center md:text-left">
-                                    <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back, Admin</h1>
-                                    <p className="text-gray-500">Select a tool below to get started with your property management tasks.</p>
+                                    <h1 className="text-3xl font-bold text-gray-900 mb-2">Property Inspection Platform</h1>
+                                    <p className="text-gray-500">Select an inspection type to get started.</p>
                                 </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     <div 
-                                        onClick={() => setActiveTool('condition-report')}
-                                        className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer group"
+                                        onClick={() => setActiveTool('entry-report')}
+                                        className="bg-white rounded-xl shadow-md border border-gray-200 p-6 hover:shadow-lg hover:border-blue-300 transition-all cursor-pointer"
                                     >
-                                        <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center mb-4 group-hover:bg-blue-100 transition-colors">
+                                        <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center mb-4">
                                             <i className="fas fa-file-alt text-2xl"></i>
                                         </div>
                                         <h3 className="text-lg font-bold text-gray-900 mb-2">Entry Condition Report</h3>
-                                        <p className="text-gray-500 text-sm mb-6">
-                                            Create comprehensive entry condition reports with photos and AI assistance.
+                                        <p className="text-gray-500 text-sm mb-4">
+                                            Document property condition at tenant move-in with photos and AI assistance.
                                         </p>
-                                        <div className="flex items-center text-blue-600 text-sm font-semibold group-hover:translate-x-1 transition-transform">
+                                        <div className="flex items-center text-blue-600 text-sm font-semibold">
                                             Start Report <i className="fas fa-arrow-right ml-2"></i>
                                         </div>
                                     </div>
-
+                                    
                                     <div 
                                         onClick={() => setActiveTool('routine-inspection')}
-                                        className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md hover:border-green-300 transition-all cursor-pointer group"
+                                        className="bg-white rounded-xl shadow-md border border-gray-200 p-6 hover:shadow-lg hover:border-green-300 transition-all cursor-pointer"
                                     >
-                                        <div className="w-12 h-12 bg-green-50 text-green-600 rounded-lg flex items-center justify-center mb-4 group-hover:bg-green-100 transition-colors">
+                                        <div className="w-12 h-12 bg-green-50 text-green-600 rounded-lg flex items-center justify-center mb-4">
                                             <i className="fas fa-clipboard-check text-2xl"></i>
                                         </div>
                                         <h3 className="text-lg font-bold text-gray-900 mb-2">Routine Inspection</h3>
-                                        <p className="text-gray-500 text-sm mb-6">
-                                            Conduct periodic routine inspections with streamlined reporting.
+                                        <p className="text-gray-500 text-sm mb-4">
+                                            Conduct periodic property inspections with streamlined reporting.
                                         </p>
-                                        <div className="flex items-center text-green-600 text-sm font-semibold group-hover:translate-x-1 transition-transform">
+                                        <div className="flex items-center text-green-600 text-sm font-semibold">
                                             Start Inspection <i className="fas fa-arrow-right ml-2"></i>
                                         </div>
                                     </div>
-
+                                    
                                     <div 
                                         onClick={() => setActiveTool('exit-inspection')}
-                                        className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md hover:border-red-300 transition-all cursor-pointer group"
+                                        className="bg-white rounded-xl shadow-md border border-gray-200 p-6 hover:shadow-lg hover:border-orange-300 transition-all cursor-pointer"
                                     >
-                                        <div className="w-12 h-12 bg-red-50 text-red-600 rounded-lg flex items-center justify-center mb-4 group-hover:bg-red-100 transition-colors">
+                                        <div className="w-12 h-12 bg-orange-50 text-orange-600 rounded-lg flex items-center justify-center mb-4">
                                             <i className="fas fa-sign-out-alt text-2xl"></i>
                                         </div>
                                         <h3 className="text-lg font-bold text-gray-900 mb-2">Exit Inspection</h3>
-                                        <p className="text-gray-500 text-sm mb-6">
-                                            Document property condition at tenant exit with detailed reporting.
+                                        <p className="text-gray-500 text-sm mb-4">
+                                            Final inspection at tenant move-out to assess condition and damages.
                                         </p>
-                                        <div className="flex items-center text-red-600 text-sm font-semibold group-hover:translate-x-1 transition-transform">
-                                            Start Inspection <i className="fas fa-arrow-right ml-2"></i>
+                                        <div className="flex items-center text-orange-600 text-sm font-semibold">
+                                            Start Exit Report <i className="fas fa-arrow-right ml-2"></i>
                                         </div>
                                     </div>
-
-                                    <div 
-                                        onClick={() => setActiveTool('clients')}
-                                        className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md hover:border-purple-300 transition-all cursor-pointer group"
-                                    >
-                                        <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-lg flex items-center justify-center mb-4 group-hover:bg-purple-100 transition-colors">
-                                            <i className="fas fa-building text-2xl"></i>
-                                        </div>
-                                        <h3 className="text-lg font-bold text-gray-900 mb-2">Property Management</h3>
-                                        <p className="text-gray-500 text-sm mb-6">
-                                            Manage your property portfolio and client information.
-                                        </p>
-                                        <div className="flex items-center text-purple-600 text-sm font-semibold group-hover:translate-x-1 transition-transform">
-                                            Manage Properties <i className="fas fa-arrow-right ml-2"></i>
-                                        </div>
-                                    </div>
-
-                                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 opacity-75">
-                                        <div className="w-12 h-12 bg-orange-50 text-orange-600 rounded-lg flex items-center justify-center mb-4">
-                                            <i className="fas fa-file-invoice text-2xl"></i>
-                                        </div>
-                                        <h3 className="text-lg font-bold text-gray-900 mb-2">Proposals</h3>
-                                        <p className="text-gray-500 text-sm mb-6">
-                                            Generate professional proposals for clients. (Coming Soon)
-                                        </p>
-                                        <div className="flex items-center text-orange-600 text-sm font-semibold opacity-50">
-                                            Coming Soon
-                                        </div>
-                                    </div>
-
-                                    <div 
-                                        onClick={() => setActiveTool('settings')}
-                                        className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md hover:border-gray-400 transition-all cursor-pointer group"
-                                    >
-                                        <div className="w-12 h-12 bg-gray-50 text-gray-600 rounded-lg flex items-center justify-center mb-4 group-hover:bg-gray-100 transition-colors">
-                                            <i className="fas fa-cog text-2xl"></i>
-                                        </div>
-                                        <h3 className="text-lg font-bold text-gray-900 mb-2">Settings</h3>
-                                        <p className="text-gray-500 text-sm mb-6">
-                                            Configure your company information and preferences.
-                                        </p>
-                                        <div className="flex items-center text-gray-600 text-sm font-semibold group-hover:translate-x-1 transition-transform">
-                                            Configure <i className="fas fa-arrow-right ml-2"></i>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="mt-10 bg-blue-50 rounded-xl p-6 border border-blue-200">
-                                    <h2 className="text-lg font-bold text-blue-900 mb-2">
-                                        <i className="fas fa-info-circle mr-2"></i>
-                                        AI-Powered Features
-                                    </h2>
-                                    <p className="text-blue-700">
-                                        This platform uses Google Gemini AI to analyze property photos and generate detailed condition descriptions. 
-                                        Simply upload photos during inspections and let AI assist with identifying defects and creating professional reports.
-                                    </p>
                                 </div>
                             </div>
                         ) : (
@@ -1047,150 +1007,226 @@ const APP_HTML = `<!DOCTYPE html>
 </body>
 </html>`;
 
+// Initialize Gemini AI with hardcoded API key for development
+const GEMINI_API_KEY = 'AIzaSyB1eta3AGLBi5exnNLV3HbqBVRm1bCl3gs';
+let genAI: GoogleGenerativeAI | null = null;
+
+// Initialize Gemini when needed
+const getGenAI = (apiKey: string) => {
+  if (!genAI || apiKey !== GEMINI_API_KEY) {
+    genAI = new GoogleGenerativeAI(apiKey);
+  }
+  return genAI;
+};
+
+// Health check
+app.get('/api/health', (c) => {
+  return c.json({ status: 'ok', service: 'inspection-platform' });
+});
+
+// Save report
+app.post('/api/reports/save', async (c) => {
+  try {
+    const report = await c.req.json();
+    const { KV } = c.env;
+    
+    const key = `report:${report.id}`;
+    await KV.put(key, JSON.stringify(report));
+    
+    // Update report list
+    const listKey = 'reports:list';
+    const existingList = await KV.get(listKey);
+    const reports = existingList ? JSON.parse(existingList) : [];
+    
+    const existingIndex = reports.findIndex((r: any) => r.id === report.id);
+    if (existingIndex >= 0) {
+      reports[existingIndex] = {
+        id: report.id,
+        propertyAddress: report.propertyAddress,
+        type: report.type,
+        tenantName: report.tenantName,
+        inspectionDate: report.inspectionDate
+      };
+    } else {
+      reports.push({
+        id: report.id,
+        propertyAddress: report.propertyAddress,
+        type: report.type,
+        tenantName: report.tenantName,
+        inspectionDate: report.inspectionDate
+      });
+    }
+    
+    await KV.put(listKey, JSON.stringify(reports));
+    
+    return c.json({ success: true, id: report.id });
+  } catch (error) {
+    return c.json({ success: false, error: String(error) }, 500);
+  }
+});
+
+// Load all reports
+app.get('/api/reports', async (c) => {
+  try {
+    const { KV } = c.env;
+    const listKey = 'reports:list';
+    const existingList = await KV.get(listKey);
+    const reports = existingList ? JSON.parse(existingList) : [];
+    
+    // Fetch full report data
+    const fullReports = await Promise.all(
+      reports.map(async (meta: any) => {
+        const reportData = await KV.get(`report:${meta.id}`);
+        return reportData ? JSON.parse(reportData) : meta;
+      })
+    );
+    
+    return c.json(fullReports);
+  } catch (error) {
+    return c.json([]);
+  }
+});
+
+// Delete report
+app.delete('/api/reports/:id', async (c) => {
+  try {
+    const id = c.req.param('id');
+    const { KV } = c.env;
+    
+    // Delete report data
+    await KV.delete(`report:${id}`);
+    
+    // Update list
+    const listKey = 'reports:list';
+    const existingList = await KV.get(listKey);
+    const reports = existingList ? JSON.parse(existingList) : [];
+    const filtered = reports.filter((r: any) => r.id !== id);
+    await KV.put(listKey, JSON.stringify(filtered));
+    
+    return c.json({ success: true });
+  } catch (error) {
+    return c.json({ success: false, error: String(error) }, 500);
+  }
+});
+
+// Gemini AI Analysis Endpoint
+app.post('/api/gemini/analyze', async (c) => {
+  try {
+    const { image, roomType, existingComment } = await c.req.json();
+    
+    // Use hardcoded API key if environment variable not set
+    const apiKey = c.env.GEMINI_API_KEY || GEMINI_API_KEY;
+    const ai = getGenAI(apiKey);
+    const model = ai.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+    
+    // Remove data URL prefix
+    const base64Data = image.replace(/^data:image\/[a-z]+;base64,/, '');
+    
+    const prompt = `You are a professional property inspector conducting a ${roomType} inspection.
+    
+Analyze this photo and provide:
+1. Overall room condition (2-3 sentences)
+2. For each standard item, assess:
+   - Walls: Clean/Undamaged/Working status and any issues
+   - Ceiling: Clean/Undamaged/Working status and any issues
+   - Flooring: Clean/Undamaged/Working status and any issues
+   - Windows: Clean/Undamaged/Working status and any issues
+   - Light Fittings: Clean/Undamaged/Working status and any issues
+   - Power Points: Clean/Undamaged/Working status and any issues
+
+Focus on visible defects, damage, or maintenance issues. Be concise and professional.
+Use Australian English spelling (e.g., colour not color).
+
+Return response in this JSON format:
+{
+  "overallComment": "Overall room assessment here",
+  "items": {
+    "Walls": {
+      "isClean": true/false,
+      "isUndamaged": true/false, 
+      "isWorking": true/false,
+      "comment": "Specific observations"
+    },
+    "Ceiling": { ... },
+    "Flooring": { ... },
+    "Windows": { ... },
+    "Light Fittings": { ... },
+    "Power Points": { ... }
+  }
+}`;
+    
+    const result = await model.generateContent([
+      prompt,
+      {
+        inlineData: {
+          mimeType: 'image/jpeg',
+          data: base64Data
+        }
+      }
+    ]);
+    
+    const response = await result.response;
+    const text = response.text();
+    
+    // Extract JSON from response
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const analysisResult = JSON.parse(jsonMatch[0]);
+      return c.json({
+        success: true,
+        ...analysisResult
+      });
+    }
+    
+    return c.json({
+      success: true,
+      overallComment: text,
+      items: {}
+    });
+    
+  } catch (error) {
+    console.error('Gemini analysis error:', error);
+    return c.json({
+      success: false,
+      error: String(error),
+      overallComment: '',
+      items: {}
+    });
+  }
+});
+
+// Test Gemini connection
+app.get('/api/gemini/test', async (c) => {
+  try {
+    const apiKey = c.env.GEMINI_API_KEY || GEMINI_API_KEY;
+    const ai = getGenAI(apiKey);
+    const model = ai.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+    
+    const result = await model.generateContent('Say "API Connected Successfully"');
+    const response = await result.response;
+    const text = response.text();
+    
+    return c.json({
+      success: true,
+      message: text,
+      model: 'gemini-2.0-flash-exp'
+    });
+  } catch (error) {
+    return c.json({
+      success: false,
+      error: String(error)
+    }, 500);
+  }
+});
+
 // Serve the main application
 app.get('/', (c) => {
   return c.html(APP_HTML);
 });
 
-// API endpoint for Gemini AI image analysis
-app.post('/api/gemini/analyze', async (c) => {
-  const { env } = c
-  
-  try {
-    const body = await c.req.json()
-    const { prompt, images, model = 'gemini-2.0-flash-exp' } = body
-
-    if (!env.GEMINI_API_KEY) {
-      return c.json({ error: 'Gemini API key not configured' }, 401)
-    }
-
-    const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY)
-    const genModel = genAI.getGenerativeModel({ model })
-
-    // Process images - convert base64 to proper format
-    const imageParts = images.map((img: any) => ({
-      inlineData: {
-        mimeType: img.mimeType || 'image/jpeg',
-        data: img.data
-      }
-    }))
-
-    // Generate content
-    const result = await genModel.generateContent({
-      contents: [{
-        role: 'user',
-        parts: [...imageParts, { text: prompt }]
-      }]
-    })
-
-    const response = await result.response
-    const text = response.text()
-
-    return c.json({ text })
-  } catch (error: any) {
-    console.error('Gemini API error:', error)
-    return c.json({ 
-      error: error.message || 'Failed to analyze with Gemini',
-      details: error.toString()
-    }, 500)
-  }
-})
-
-// API endpoint for saving reports
-app.post('/api/reports/save', async (c) => {
-  const { env } = c
-  
-  try {
-    const report = await c.req.json()
-    const key = `report:${report.id}`
-    
-    await env.KV.put(key, JSON.stringify(report), {
-      metadata: {
-        propertyAddress: report.propertyAddress,
-        inspectionDate: report.inspectionDate,
-        createdAt: new Date().toISOString()
-      }
-    })
-
-    return c.json({ success: true, id: report.id })
-  } catch (error: any) {
-    console.error('Save report error:', error)
-    return c.json({ error: 'Failed to save report' }, 500)
-  }
-})
-
-// API endpoint for listing reports
-app.get('/api/reports', async (c) => {
-  const { env } = c
-  
-  try {
-    const list = await env.KV.list({ prefix: 'report:' })
-    const reports = []
-
-    for (const key of list.keys) {
-      if (key.metadata) {
-        reports.push({
-          id: key.name.replace('report:', ''),
-          ...key.metadata
-        })
-      }
-    }
-
-    // Sort by inspection date descending
-    reports.sort((a: any, b: any) => 
-      new Date(b.inspectionDate).getTime() - new Date(a.inspectionDate).getTime()
-    )
-
-    return c.json(reports)
-  } catch (error: any) {
-    console.error('List reports error:', error)
-    return c.json({ error: 'Failed to list reports' }, 500)
-  }
-})
-
-// API endpoint for loading a specific report
-app.get('/api/reports/:id', async (c) => {
-  const { env } = c
-  const id = c.req.param('id')
-  
-  try {
-    const key = `report:${id}`
-    const report = await env.KV.get(key, 'json')
-    
-    if (!report) {
-      return c.json({ error: 'Report not found' }, 404)
-    }
-
-    return c.json(report)
-  } catch (error: any) {
-    console.error('Load report error:', error)
-    return c.json({ error: 'Failed to load report' }, 500)
-  }
-})
-
-// API endpoint for deleting a report
-app.delete('/api/reports/:id', async (c) => {
-  const { env } = c
-  const id = c.req.param('id')
-  
-  try {
-    const key = `report:${id}`
-    await env.KV.delete(key)
-    
-    return c.json({ success: true })
-  } catch (error: any) {
-    console.error('Delete report error:', error)
-    return c.json({ error: 'Failed to delete report' }, 500)
-  }
-})
-
-// Health check
-app.get('/api/health', (c) => {
-  return c.json({ 
-    status: 'ok',
-    service: 'inspection-platform',
-    timestamp: new Date().toISOString()
-  })
-})
+// Catch all routes - return the app
+app.get('*', (c) => {
+  return c.html(APP_HTML);
+});
 
 export default app

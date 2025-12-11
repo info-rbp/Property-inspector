@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Remote Business Partner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lucide-static@0.321.0/font/lucide.css">
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/idb@8.0.0/build/umd.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        .icon-wrapper {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+        
+        // Icons as React components (using simple SVG)
+        const Icons = {
+            Menu: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>,
+            X: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>,
+            FileText: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>,
+            CheckCircle: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg>,
+            LogOut: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>,
+            Building: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 21h18M9 8h1M14 8h1M9 12h1M14 12h1M5 21V7a2 2 0 012-2h10a2 2 0 012 2v14"/></svg>,
+            FileOutput: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13l-5 5-5-5"/></svg>,
+            Lightbulb: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18h6M10 22h4M15 2a7 7 0 01-6 12.75V22h6v-7.25A7 7 0 0015 2z"/></svg>,
+            Settings: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6m4.22-13.22l4.24 4.24M1.54 19.46l4.24-4.24M21 12h-6m-6 0H3m13.22 4.22l4.24 4.24M1.54 4.54l4.24 4.24"/></svg>,
+            ChevronRight: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>,
+            Grid: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>,
+            Camera: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>,
+            Plus: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+            Trash: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14zM10 11v6M14 11v6"/></svg>,
+            Save: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>,
+            FolderOpen: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>,
+            FilePdf: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M10 12v5"/><circle cx="10" cy="12" r="1"/></svg>,
+            Robot: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4M8 16h0M16 16h0"/></svg>
+        };
+        
+        // Utility functions
+        const generateId = () => Math.random().toString(36).substring(2, 15);
+        
+        const ROOM_TYPES = [
+            'Living Room', 'Bedroom', 'Master Bedroom', 'Kitchen', 'Bathroom', 
+            'Ensuite', 'Laundry', 'Garage', 'Front Yard', 'Back Yard', 
+            'Hallway', 'Dining Room', 'Study', 'Entry', 'Balcony', 'Storage'
+        ];
+        
+        const getInitialItemsForRoom = (roomType) => {
+            const commonItems = [
+                { name: 'Walls', isClean: true, isUndamaged: true, isWorking: true },
+                { name: 'Ceiling', isClean: true, isUndamaged: true, isWorking: true },
+                { name: 'Flooring', isClean: true, isUndamaged: true, isWorking: true },
+                { name: 'Windows', isClean: true, isUndamaged: true, isWorking: true },
+                { name: 'Light Fittings', isClean: true, isUndamaged: true, isWorking: true },
+                { name: 'Power Points', isClean: true, isUndamaged: true, isWorking: true }
+            ];
+            
+            const roomSpecific = {
+                'Kitchen': [
+                    { name: 'Kitchen Benchtop', isClean: true, isUndamaged: true, isWorking: true },
+                    { name: 'Sink/Taps', isClean: true, isUndamaged: true, isWorking: true },
+                    { name: 'Oven/Stove', isClean: true, isUndamaged: true, isWorking: true },
+                    { name: 'Rangehood', isClean: true, isUndamaged: true, isWorking: true },
+                    { name: 'Cupboards/Drawers', isClean: true, isUndamaged: true, isWorking: true }
+                ],
+                'Bathroom': [
+                    { name: 'Shower', isClean: true, isUndamaged: true, isWorking: true },
+                    { name: 'Toilet', isClean: true, isUndamaged: true, isWorking: true },
+                    { name: 'Vanity', isClean: true, isUndamaged: true, isWorking: true },
+                    { name: 'Mirror', isClean: true, isUndamaged: true, isWorking: true },
+                    { name: 'Towel Rails', isClean: true, isUndamaged: true, isWorking: true }
+                ],
+                'Laundry': [
+                    { name: 'Sink/Taps', isClean: true, isUndamaged: true, isWorking: true },
+                    { name: 'Cabinets', isClean: true, isUndamaged: true, isWorking: true },
+                    { name: 'Washing Machine Taps', isClean: true, isUndamaged: true, isWorking: true }
+                ]
+            };
+            
+            return [
+                ...commonItems,
+                ...(roomSpecific[roomType] || [])
+            ].map(item => ({
+                id: generateId(),
+                ...item,
+                comment: ''
+            }));
+        };
+
+        // ConditionReport Component (used for all report types)
+        const ConditionReport = ({ reportType = 'Entry' }) => {
+            const [report, setReport] = useState({
+                id: generateId(),
+                propertyAddress: '',
+                agentName: 'Admin Team',
+                agentCompany: 'Remote Business Partner',
+                agentAddress: 'Perth, WA',
+                agentPhone: '0400 000 000',
+                agentEmail: 'admin@rbp.com.au',
+                clientName: '',
+                inspectionDate: new Date().toISOString().split('T')[0],
+                tenantName: '',
+                reportType: `${reportType} Condition Report`,
+                rooms: []
+            });
+            
+            const [selectedRoomType, setSelectedRoomType] = useState(ROOM_TYPES[0]);
+            const [newRoomName, setNewRoomName] = useState(ROOM_TYPES[0]);
+            const [isSaving, setIsSaving] = useState(false);
+            const [savedReports, setSavedReports] = useState([]);
+            const [showLoadModal, setShowLoadModal] = useState(false);
+            const [isAnalyzing, setIsAnalyzing] = useState(false);
+            
+            const updateReport = (updates) => {
+                setReport(prev => ({ ...prev, ...updates }));
+            };
+            
+            const addRoom = () => {
+                const room = {
+                    id: generateId(),
+                    name: newRoomName || selectedRoomType,
+                    items: getInitialItemsForRoom(selectedRoomType),
+                    photos: [],
+                    overallComment: ''
+                };
+                
+                setReport(prev => ({
+                    ...prev,
+                    rooms: [...prev.rooms, room]
+                }));
+            };
+            
+            const removeRoom = (roomId) => {
+                if (confirm('Are you sure you want to remove this room?')) {
+                    setReport(prev => ({
+                        ...prev,
+                        rooms: prev.rooms.filter(r => r.id !== roomId)
+                    }));
+                }
+            };
+            
+            const handlePhotoUpload = async (roomId, files) => {
+                const room = report.rooms.find(r => r.id === roomId);
+                if (!room) return;
+                
+                const newPhotos = [];
+                for (const file of files) {
+                    const photo = {
+                        id: generateId(),
+                        file: file,
+                        previewUrl: URL.createObjectURL(file),
+                        tags: []
+                    };
+                    newPhotos.push(photo);
+                }
+                
+                const updatedRoom = {
+                    ...room,
+                    photos: [...room.photos, ...newPhotos]
+                };
+                
+                setReport(prev => ({
+                    ...prev,
+                    rooms: prev.rooms.map(r => r.id === roomId ? updatedRoom : r)
+                }));
+                
+                // Analyze photos with Gemini if available
+                if (newPhotos.length > 0) {
+                    analyzePhotosWithAI(roomId, newPhotos, room.name);
+                }
+            };
+            
+            const analyzePhotosWithAI = async (roomId, photos, roomName) => {
+                setIsAnalyzing(true);
+                try {
+                    for (const photo of photos) {
+                        const base64 = await convertToBase64(photo.file);
+                        
+                        const response = await fetch('/api/gemini/analyze', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                prompt: `Analyze this ${roomName} photo for a property ${reportType.toLowerCase()} condition report. Identify:
+                                1. Overall condition (Excellent/Good/Fair/Poor)
+                                2. Any visible defects, damage, or wear
+                                3. Cleanliness issues
+                                4. Items that may need repair or attention
+                                Use Australian English spelling. Be concise but thorough.`,
+                                images: [{
+                                    data: base64.split(',')[1],
+                                    mimeType: photo.file.type
+                                }]
+                            })
+                        });
+                        
+                        if (response.ok) {
+                            const result = await response.json();
+                            // Update room comment with AI analysis
+                            const room = report.rooms.find(r => r.id === roomId);
+                            if (room) {
+                                const updatedRoom = {
+                                    ...room,
+                                    overallComment: room.overallComment 
+                                        ? `${room.overallComment}\n\nAI Analysis: ${result.text}`
+                                        : `AI Analysis: ${result.text}`
+                                };
+                                setReport(prev => ({
+                                    ...prev,
+                                    rooms: prev.rooms.map(r => r.id === roomId ? updatedRoom : r)
+                                }));
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error('AI analysis failed:', error);
+                } finally {
+                    setIsAnalyzing(false);
+                }
+            };
+            
+            const convertToBase64 = (file) => {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.readAsDataURL(file);
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = reject;
+                });
+            };
+            
+            const saveReport = async () => {
+                if (!report.propertyAddress) {
+                    alert('Please enter a property address');
+                    return;
+                }
+                
+                setIsSaving(true);
+                try {
+                    const response = await fetch('/api/reports/save', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(report)
+                    });
+                    
+                    if (response.ok) {
+                        alert('Report saved successfully!');
+                    } else {
+                        throw new Error('Failed to save');
+                    }
+                } catch (error) {
+                    alert('Failed to save report: ' + error.message);
+                } finally {
+                    setIsSaving(false);
+                }
+            };
+            
+            const loadReports = async () => {
+                try {
+                    const response = await fetch('/api/reports');
+                    if (response.ok) {
+                        const reports = await response.json();
+                        setSavedReports(reports.filter(r => r.reportType && r.reportType.includes(reportType)));
+                        setShowLoadModal(true);
+                    }
+                } catch (error) {
+                    console.error('Failed to load reports:', error);
+                }
+            };
+            
+            return (
+                <div className="p-4 animate-in">
+                    <div className="max-w-6xl mx-auto">
+                        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+                            <h1 className="text-2xl font-semibold text-gray-900 mb-2">
+                                {reportType} Condition Report
+                            </h1>
+                            <p className="text-gray-600">Create a comprehensive property condition report with AI assistance</p>
+                        </div>
+                        
+                        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+                            <h2 className="text-lg font-semibold mb-4">Property Details</h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Property Address *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={report.propertyAddress}
+                                        onChange={(e) => updateReport({ propertyAddress: e.target.value })}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        placeholder="123 Main St, City, State"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Client/Owner Name
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={report.clientName}
+                                        onChange={(e) => updateReport({ clientName: e.target.value })}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Tenant Name
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={report.tenantName}
+                                        onChange={(e) => updateReport({ tenantName: e.target.value })}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Inspection Date
+                                    </label>
+                                    <input
+                                        type="date"
+                                        value={report.inspectionDate}
+                                        onChange={(e) => updateReport({ inspectionDate: e.target.value })}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+                            <h2 className="text-lg font-semibold mb-4">Add Room</h2>
+                            <div className="flex gap-3">
+                                <select
+                                    value={selectedRoomType}
+                                    onChange={(e) => {
+                                        setSelectedRoomType(e.target.value);
+                                        setNewRoomName(e.target.value);
+                                    }}
+                                    className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                >
+                                    {ROOM_TYPES.map(type => (
+                                        <option key={type} value={type}>{type}</option>
+                                    ))}
+                                </select>
+                                <input
+                                    type="text"
+                                    value={newRoomName}
+                                    onChange={(e) => setNewRoomName(e.target.value)}
+                                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    placeholder="Room name (optional)"
+                                />
+                                <button
+                                    onClick={addRoom}
+                                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition flex items-center gap-2"
+                                >
+                                    <Icons.Plus />
+                                    Add Room
+                                </button>
+                            </div>
+                        </div>
+                        
+                        {report.rooms.map(room => (
+                            <div key={room.id} className="bg-white rounded-lg shadow-sm p-6 mb-6">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="text-lg font-semibold">{room.name}</h3>
+                                    <button
+                                        onClick={() => removeRoom(room.id)}
+                                        className="text-red-600 hover:text-red-800 p-2"
+                                    >
+                                        <Icons.Trash />
+                                    </button>
+                                </div>
+                                
+                                <div className="mb-4">
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Photos ({room.photos.length})
+                                    </label>
+                                    <input
+                                        type="file"
+                                        multiple
+                                        accept="image/*"
+                                        onChange={(e) => handlePhotoUpload(room.id, Array.from(e.target.files))}
+                                        className="hidden"
+                                        id={`photo-${room.id}`}
+                                    />
+                                    <label
+                                        htmlFor={`photo-${room.id}`}
+                                        className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 cursor-pointer transition"
+                                    >
+                                        <Icons.Camera />
+                                        Add Photos
+                                    </label>
+                                    
+                                    {room.photos.length > 0 && (
+                                        <div className="flex gap-2 mt-3 flex-wrap">
+                                            {room.photos.map(photo => (
+                                                <img
+                                                    key={photo.id}
+                                                    src={photo.previewUrl}
+                                                    alt="Room photo"
+                                                    className="w-24 h-24 object-cover rounded-lg border border-gray-200"
+                                                />
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                                
+                                {room.overallComment && (
+                                    <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                                        <label className="block text-sm font-medium text-blue-900 mb-1">
+                                            AI Analysis & Comments
+                                        </label>
+                                        <p className="text-sm text-gray-700 whitespace-pre-wrap">{room.overallComment}</p>
+                                    </div>
+                                )}
+                                
+                                <div className="space-y-2">
+                                    {room.items.map(item => (
+                                        <div key={item.id} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+                                            <span className="flex-1 text-sm font-medium text-gray-700">{item.name}</span>
+                                            <label className="flex items-center text-sm">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={item.isClean}
+                                                    onChange={(e) => {
+                                                        const updatedRoom = {
+                                                            ...room,
+                                                            items: room.items.map(i =>
+                                                                i.id === item.id ? { ...i, isClean: e.target.checked } : i
+                                                            )
+                                                        };
+                                                        setReport(prev => ({
+                                                            ...prev,
+                                                            rooms: prev.rooms.map(r => r.id === room.id ? updatedRoom : r)
+                                                        }));
+                                                    }}
+                                                    className="mr-1.5"
+                                                />
+                                                Clean
+                                            </label>
+                                            <label className="flex items-center text-sm">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={item.isUndamaged}
+                                                    onChange={(e) => {
+                                                        const updatedRoom = {
+                                                            ...room,
+                                                            items: room.items.map(i =>
+                                                                i.id === item.id ? { ...i, isUndamaged: e.target.checked } : i
+                                                            )
+                                                        };
+                                                        setReport(prev => ({
+                                                            ...prev,
+                                                            rooms: prev.rooms.map(r => r.id === room.id ? updatedRoom : r)
+                                                        }));
+                                                    }}
+                                                    className="mr-1.5"
+                                                />
+                                                Undamaged
+                                            </label>
+                                            <label className="flex items-center text-sm">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={item.isWorking}
+                                                    onChange={(e) => {
+                                                        const updatedRoom = {
+                                                            ...room,
+                                                            items: room.items.map(i =>
+                                                                i.id === item.id ? { ...i, isWorking: e.target.checked } : i
+                                                            )
+                                                        };
+                                                        setReport(prev => ({
+                                                            ...prev,
+                                                            rooms: prev.rooms.map(r => r.id === room.id ? updatedRoom : r)
+                                                        }));
+                                                    }}
+                                                    className="mr-1.5"
+                                                />
+                                                Working
+                                            </label>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                        
+                        <div className="bg-white rounded-lg shadow-sm p-6">
+                            <div className="flex flex-wrap gap-3">
+                                <button
+                                    onClick={saveReport}
+                                    disabled={isSaving}
+                                    className="px-5 py-2.5 bg-green-600 text-white rounded-md hover:bg-green-700 transition disabled:opacity-50 flex items-center gap-2"
+                                >
+                                    {isSaving ? (
+                                        <>
+                                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                                            Saving...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Icons.Save />
+                                            Save Report
+                                        </>
+                                    )}
+                                </button>
+                                <button
+                                    onClick={loadReports}
+                                    className="px-5 py-2.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition flex items-center gap-2"
+                                >
+                                    <Icons.FolderOpen />
+                                    Load Report
+                                </button>
+                                <button
+                                    className="px-5 py-2.5 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition flex items-center gap-2"
+                                >
+                                    <Icons.FilePdf />
+                                    Export PDF
+                                </button>
+                                {isAnalyzing && (
+                                    <div className="flex items-center text-blue-600 px-3">
+                                        <Icons.Robot />
+                                        <span className="ml-2">AI Analyzing Photos...</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                        
+                        {showLoadModal && (
+                            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                                <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-96 overflow-y-auto">
+                                    <h2 className="text-xl font-semibold mb-4">Load {reportType} Report</h2>
+                                    <div className="space-y-2">
+                                        {savedReports.map(r => (
+                                            <div
+                                                key={r.id}
+                                                className="p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition"
+                                                onClick={async () => {
+                                                    const response = await fetch(`/api/reports/${r.id}`);
+                                                    if (response.ok) {
+                                                        const loadedReport = await response.json();
+                                                        setReport(loadedReport);
+                                                        setShowLoadModal(false);
+                                                    }
+                                                }}
+                                            >
+                                                <div className="font-medium">{r.propertyAddress || 'Untitled'}</div>
+                                                <div className="text-sm text-gray-600">{r.inspectionDate}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <button
+                                        onClick={() => setShowLoadModal(false)}
+                                        className="mt-4 px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        // Property Manager Component
+        const PropertyManager = () => {
+            const [properties, setProperties] = useState([]);
+            const [showAddModal, setShowAddModal] = useState(false);
+            const [newProperty, setNewProperty] = useState({
+                address: '',
+                owner: '',
+                tenant: '',
+                type: 'House',
+                bedrooms: '',
+                bathrooms: '',
+                keys: ''
+            });
+
+            useEffect(() => {
+                loadProperties();
+            }, []);
+
+            const loadProperties = async () => {
+                const savedProps = localStorage.getItem('properties');
+                if (savedProps) {
+                    setProperties(JSON.parse(savedProps));
+                }
+            };
+
+            const saveProperty = () => {
+                if (!newProperty.address) {
+                    alert('Please enter property address');
+                    return;
+                }
+                const property = {
+                    ...newProperty,
+                    id: generateId(),
+                    createdAt: new Date().toISOString()
+                };
+                const updatedProperties = [...properties, property];
+                setProperties(updatedProperties);
+                localStorage.setItem('properties', JSON.stringify(updatedProperties));
+                setNewProperty({
+                    address: '',
+                    owner: '',
+                    tenant: '',
+                    type: 'House',
+                    bedrooms: '',
+                    bathrooms: '',
+                    keys: ''
+                });
+                setShowAddModal(false);
+            };
+
+            return (
+                <div className="p-4 animate-in">
+                    <div className="max-w-6xl mx-auto">
+                        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+                            <div className="flex justify-between items-center">
+                                <div>
+                                    <h1 className="text-2xl font-semibold text-gray-900 mb-2">Property Manager</h1>
+                                    <p className="text-gray-600">Manage your property portfolio, owner details, keys, and tenant assignments.</p>
+                                </div>
+                                <button
+                                    onClick={() => setShowAddModal(true)}
+                                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition flex items-center gap-2"
+                                >
+                                    <Icons.Plus />
+                                    Add Property
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {properties.map(property => (
+                                <div key={property.id} className="bg-white rounded-lg shadow-sm p-5 hover:shadow-md transition">
+                                    <h3 className="font-semibold text-lg mb-3 text-gray-900">{property.address}</h3>
+                                    <div className="space-y-1.5 text-sm text-gray-600">
+                                        <p><span className="font-medium text-gray-700">Owner:</span> {property.owner}</p>
+                                        <p><span className="font-medium text-gray-700">Tenant:</span> {property.tenant || 'Vacant'}</p>
+                                        <p><span className="font-medium text-gray-700">Type:</span> {property.type}</p>
+                                        <p><span className="font-medium text-gray-700">Beds/Baths:</span> {property.bedrooms}/{property.bathrooms}</p>
+                                        <p><span className="font-medium text-gray-700">Keys:</span> {property.keys || 'Not specified'}</p>
+                                    </div>
+                                    <div className="mt-4 pt-3 border-t border-gray-100 flex gap-3">
+                                        <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                                            Edit
+                                        </button>
+                                        <button className="text-red-600 hover:text-red-800 text-sm font-medium">
+                                            Delete
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {showAddModal && (
+                            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                                <div className="bg-white rounded-lg p-6 max-w-md w-full">
+                                    <h2 className="text-xl font-semibold mb-4">Add New Property</h2>
+                                    <div className="space-y-3">
+                                        <input
+                                            type="text"
+                                            placeholder="Property Address"
+                                            value={newProperty.address}
+                                            onChange={(e) => setNewProperty({...newProperty, address: e.target.value})}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                        <input
+                                            type="text"
+                                            placeholder="Owner Name"
+                                            value={newProperty.owner}
+                                            onChange={(e) => setNewProperty({...newProperty, owner: e.target.value})}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                        <input
+                                            type="text"
+                                            placeholder="Tenant Name (optional)"
+                                            value={newProperty.tenant}
+                                            onChange={(e) => setNewProperty({...newProperty, tenant: e.target.value})}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                        <select
+                                            value={newProperty.type}
+                                            onChange={(e) => setNewProperty({...newProperty, type: e.target.value})}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        >
+                                            <option value="House">House</option>
+                                            <option value="Apartment">Apartment</option>
+                                            <option value="Townhouse">Townhouse</option>
+                                            <option value="Villa">Villa</option>
+                                        </select>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <input
+                                                type="number"
+                                                placeholder="Bedrooms"
+                                                value={newProperty.bedrooms}
+                                                onChange={(e) => setNewProperty({...newProperty, bedrooms: e.target.value})}
+                                                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            />
+                                            <input
+                                                type="number"
+                                                placeholder="Bathrooms"
+                                                value={newProperty.bathrooms}
+                                                onChange={(e) => setNewProperty({...newProperty, bathrooms: e.target.value})}
+                                                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            />
+                                        </div>
+                                        <input
+                                            type="text"
+                                            placeholder="Key location/details"
+                                            value={newProperty.keys}
+                                            onChange={(e) => setNewProperty({...newProperty, keys: e.target.value})}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                    </div>
+                                    <div className="mt-6 flex gap-3">
+                                        <button
+                                            onClick={saveProperty}
+                                            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                                        >
+                                            Save Property
+                                        </button>
+                                        <button
+                                            onClick={() => setShowAddModal(false)}
+                                            className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        // Proposal Generator Component
+        const ProposalGenerator = () => {
+            return (
+                <div className="p-4 animate-in">
+                    <div className="max-w-6xl mx-auto">
+                        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+                            <h1 className="text-2xl font-semibold text-gray-900 mb-2">Proposal Generator</h1>
+                            <p className="text-gray-600">Create professional management proposals and agreements for new landlords in minutes.</p>
+                        </div>
+                        <div className="bg-white rounded-lg shadow-sm p-8 text-center">
+                            <Icons.FileOutput className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                            <h2 className="text-lg font-medium text-gray-900 mb-2">Coming Soon</h2>
+                            <p className="text-gray-600">Proposal generator feature is under development</p>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Feature Request Component
+        const FeatureRequest = () => {
+            return (
+                <div className="p-4 animate-in">
+                    <div className="max-w-6xl mx-auto">
+                        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+                            <h1 className="text-2xl font-semibold text-gray-900 mb-2">Feature Request</h1>
+                            <p className="text-gray-600">Submit ideas and requests for new features to help improve the platform.</p>
+                        </div>
+                        <div className="bg-white rounded-lg shadow-sm p-8">
+                            <form className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Feature Title</label>
+                                    <input type="text" className="w-full px-3 py-2 border border-gray-300 rounded-md" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                                    <textarea rows="4" className="w-full px-3 py-2 border border-gray-300 rounded-md"></textarea>
+                                </div>
+                                <button type="submit" className="px-5 py-2.5 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                                    Submit Request
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Settings Component
+        const Settings = () => {
+            const [settings, setSettings] = useState({
+                companyName: 'Remote Business Partner',
+                companyDetails: 'Perth, WA',
+                branding: '',
+                apiKeys: ''
+            });
+
+            return (
+                <div className="p-4 animate-in">
+                    <div className="max-w-6xl mx-auto">
+                        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+                            <h1 className="text-2xl font-semibold text-gray-900 mb-2">Settings</h1>
+                            <p className="text-gray-600">Configure company details, branding, API keys, and application preferences.</p>
+                        </div>
+                        <div className="bg-white rounded-lg shadow-sm p-6">
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
+                                    <input 
+                                        type="text" 
+                                        value={settings.companyName}
+                                        onChange={(e) => setSettings({...settings, companyName: e.target.value})}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Company Details</label>
+                                    <textarea 
+                                        rows="3" 
+                                        value={settings.companyDetails}
+                                        onChange={(e) => setSettings({...settings, companyDetails: e.target.value})}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                    ></textarea>
+                                </div>
+                                <button className="px-5 py-2.5 bg-green-600 text-white rounded-md hover:bg-green-700">
+                                    Save Settings
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Main App Component with Dashboard
+        const App = () => {
+            const [activeTool, setActiveTool] = useState('dashboard');
+            const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+            const menuItems = [
+                { id: 'dashboard', label: 'Dashboard', icon: Icons.Grid },
+                { id: 'entry-report', label: 'Entry Report', icon: Icons.FileText },
+                { id: 'routine-inspection', label: 'Routine Inspection', icon: Icons.CheckCircle },
+                { id: 'exit-inspection', label: 'Exit Inspection', icon: Icons.LogOut },
+                { id: 'properties', label: 'Properties', icon: Icons.Building },
+                { id: 'proposals', label: 'Proposals', icon: Icons.FileOutput },
+                { id: 'feature-request', label: 'Feature Request', icon: Icons.Lightbulb },
+                { id: 'settings', label: 'Settings', icon: Icons.Settings }
+            ];
+
+            const getActiveComponent = () => {
+                switch (activeTool) {
+                    case 'entry-report':
+                        return <ConditionReport key="entry" reportType="Entry" />;
+                    case 'routine-inspection':
+                        return <ConditionReport key="routine" reportType="Routine" />;
+                    case 'exit-inspection':
+                        return <ConditionReport key="exit" reportType="Exit" />;
+                    case 'properties':
+                        return <PropertyManager />;
+                    case 'proposals':
+                        return <ProposalGenerator />;
+                    case 'feature-request':
+                        return <FeatureRequest />;
+                    case 'settings':
+                        return <Settings />;
+                    default:
+                        return null;
+                }
+            };
+
+            const DashboardCard = ({ title, description, action, onClick, icon: Icon, color = 'blue' }) => {
+                const colors = {
+                    blue: 'bg-blue-50 text-blue-600',
+                    green: 'bg-green-50 text-green-600',
+                    orange: 'bg-orange-50 text-orange-600',
+                    purple: 'bg-purple-50 text-purple-600',
+                    yellow: 'bg-yellow-50 text-yellow-600',
+                    gray: 'bg-gray-50 text-gray-600'
+                };
+                
+                const actionColors = {
+                    blue: 'text-blue-600',
+                    green: 'text-green-600',
+                    orange: 'text-orange-600',
+                    purple: 'text-purple-600',
+                    yellow: 'text-yellow-600',
+                    gray: 'text-gray-600'
+                };
+                
+                return (
+                    <div 
+                        onClick={onClick}
+                        className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer"
+                    >
+                        <div className={`w-12 h-12 rounded-lg ${colors[color]} flex items-center justify-center mb-4`}>
+                            <Icon />
+                        </div>
+                        <h3 className="font-semibold text-lg text-gray-900 mb-2">{title}</h3>
+                        <p className="text-gray-600 text-sm mb-4 leading-relaxed">{description}</p>
+                        <div className={`flex items-center ${actionColors[color]} font-medium text-sm`}>
+                            {action}
+                            <Icons.ChevronRight />
+                        </div>
+                    </div>
+                );
+            };
+
+            return (
+                <div className="min-h-screen bg-gray-50">
+                    {/* Header */}
+                    <header className="bg-white border-b border-gray-200">
+                        <div className="px-4 sm:px-6 lg:px-8">
+                            <div className="flex justify-between items-center h-16">
+                                <div 
+                                    className="flex items-center cursor-pointer"
+                                    onClick={() => setActiveTool('dashboard')}
+                                >
+                                    <div className="w-8 h-8 bg-blue-700 rounded flex items-center justify-center text-white font-bold text-sm mr-3">
+                                        RB
+                                    </div>
+                                    <span className="font-semibold text-lg">Remote Business Partner</span>
+                                </div>
+                                
+                                <button
+                                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                                    className="p-2 rounded-lg hover:bg-gray-100"
+                                >
+                                    {isMobileMenuOpen ? <Icons.X /> : <Icons.Menu />}
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Mobile Menu */}
+                        {isMobileMenuOpen && (
+                            <div className="border-t border-gray-200 bg-white px-4 py-2">
+                                {menuItems.map(item => (
+                                    <button
+                                        key={item.id}
+                                        onClick={() => {
+                                            setActiveTool(item.id);
+                                            setIsMobileMenuOpen(false);
+                                        }}
+                                        className={`w-full text-left px-3 py-2 rounded-lg flex items-center gap-3 ${
+                                            activeTool === item.id ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-50'
+                                        }`}
+                                    >
+                                        <item.icon />
+                                        <span>{item.label}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </header>
+
+                    {/* Main Content */}
+                    <main>
+                        {activeTool === 'dashboard' ? (
+                            <div className="p-4 animate-in">
+                                <div className="max-w-6xl mx-auto">
+                                    <div className="mb-8 text-center">
+                                        <h1 className="text-3xl font-semibold text-gray-900 mb-2">Welcome Back, Admin</h1>
+                                        <p className="text-gray-600">Select a tool below to get started with your property management tasks.</p>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                                        <DashboardCard
+                                            title="Entry Condition Report"
+                                            description="Create comprehensive entry condition reports including photos, AI-assisted commentary, and formatting for print/PDF."
+                                            action="Start Report"
+                                            onClick={() => setActiveTool('entry-report')}
+                                            icon={Icons.FileText}
+                                            color="blue"
+                                        />
+                                        
+                                        <DashboardCard
+                                            title="Routine Inspection"
+                                            description="Conduct periodic routine inspections with AI analysis and streamlined reporting."
+                                            action="Start Inspection"
+                                            onClick={() => setActiveTool('routine-inspection')}
+                                            icon={Icons.CheckCircle}
+                                            color="green"
+                                        />
+                                        
+                                        <DashboardCard
+                                            title="Exit Inspection"
+                                            description="Generate final exit reports, comparing conditions and identifying bond deductions efficiently."
+                                            action="Start Exit Report"
+                                            onClick={() => setActiveTool('exit-inspection')}
+                                            icon={Icons.LogOut}
+                                            color="orange"
+                                        />
+                                        
+                                        <DashboardCard
+                                            title="Property Manager"
+                                            description="Manage your property portfolio, owner details, keys, and tenant assignments."
+                                            action="View Properties"
+                                            onClick={() => setActiveTool('properties')}
+                                            icon={Icons.Building}
+                                            color="purple"
+                                        />
+                                        
+                                        <DashboardCard
+                                            title="Proposal Generator"
+                                            description="Create professional management proposals and agreements for new landlords in minutes."
+                                            action="Create Proposal"
+                                            onClick={() => setActiveTool('proposals')}
+                                            icon={Icons.FileOutput}
+                                            color="blue"
+                                        />
+                                        
+                                        <DashboardCard
+                                            title="Feature Request"
+                                            description="Submit ideas and requests for new features to help improve the platform."
+                                            action="Request Feature"
+                                            onClick={() => setActiveTool('feature-request')}
+                                            icon={Icons.Lightbulb}
+                                            color="yellow"
+                                        />
+                                        
+                                        <DashboardCard
+                                            title="Settings"
+                                            description="Configure company details, branding, API keys, and application preferences."
+                                            action="Manage Settings"
+                                            onClick={() => setActiveTool('settings')}
+                                            icon={Icons.Settings}
+                                            color="gray"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            getActiveComponent()
+                        )}
+                    </main>
+                </div>
+            );
+        };
+        
+        // Render the app
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
