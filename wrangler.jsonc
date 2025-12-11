@@ -1,0 +1,21 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "inspection-platform",
+  "compatibility_date": "2024-01-01",
+  "pages_build_output_dir": "./dist",
+  "compatibility_flags": ["nodejs_compat"],
+  
+  // KV Namespace for storing reports
+  "kv_namespaces": [
+    {
+      "binding": "KV",
+      "id": "inspection_kv_production",
+      "preview_id": "inspection_kv_preview"
+    }
+  ],
+  
+  // Environment variables - Gemini API key will be set as a secret
+  "vars": {
+    "ENVIRONMENT": "production"
+  }
+}
