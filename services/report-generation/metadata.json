@@ -1,0 +1,5 @@
+{
+  "name": "report-generation-service",
+  "description": "Enterprise-grade PDF generation service for property inspection reports using Playwright, TypeScript, and Cloud Run.",
+  "requestFramePermissions": []
+}

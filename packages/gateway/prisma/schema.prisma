@@ -1,0 +1,292 @@
+// Gateway Database Schema - System of Record
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ========== CORE ENTITIES ==========
+
+model Tenant {
+  id                String   @id @default(cuid())
+  name              String
+  plan              String   @default("basic") // basic, pro, premium, enterprise
+  status            String   @default("active") // active, suspended, cancelled
+  brandingVersion   String?
+  templateVersion   String?
+  featureFlags      Json     @default("{}") // JSON object of feature flags
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  users             User[]
+  properties        Property[]
+  inspections       Inspection[]
+  rooms             Room[]
+  components        Component[]
+  issues            Issue[]
+  media             MediaReference[]
+  jobs              Job[]
+  auditLogs         AuditLog[]
+  remoteRequests    RemoteRequest[]
+
+  @@map("tenants")
+}
+
+model User {
+  id                String   @id @default(cuid())
+  tenantId          String
+  email             String   @unique
+  name              String
+  role              String   // INSPECTOR, VIEWER, ADMIN, SYSTEM_SERVICE
+  status            String   @default("active") // active, suspended, deleted
+  lastLogin         DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  tenant            Tenant   @relation(fields: [tenantId], references: [id])
+  inspections       Inspection[]
+  auditLogs         AuditLog[]
+
+  @@index([tenantId])
+  @@map("users")
+}
+
+model Property {
+  id                String   @id @default(cuid())
+  tenantId          String
+  street1           String
+  street2           String?
+  city              String
+  state             String   // WA, NSW, VIC, QLD, SA, TAS, ACT, NT
+  postalCode        String
+  country           String   @default("AU")
+  propertyType      String?  // house, apartment, commercial
+  bedrooms          Int?
+  bathrooms         Int?
+  metadata          Json     @default("{}")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  tenant            Tenant   @relation(fields: [tenantId], references: [id])
+  inspections       Inspection[]
+
+  @@index([tenantId])
+  @@map("properties")
+}
+
+model Inspection {
+  id                String   @id @default(cuid())
+  tenantId          String
+  propertyId        String
+  createdByUserId   String
+  inspectionType    String   // CONDITION_REPORT, ROUTINE, EXIT, REMOTE
+  status            String   // DRAFT, IN_PROGRESS, COMPLETED, FINALIZED
+  reportStatus      String   @default("NONE") // NONE, DRAFT, FINALIZED
+  jurisdiction      String   // WA, NSW, VIC, QLD, SA, TAS, ACT, NT
+  analysisVersion   Int      @default(0)
+  scheduledDate     DateTime?
+  completedDate     DateTime?
+  finalizedDate     DateTime?
+  reportPath        String?
+  reportMediaId     String?
+  metadata          Json     @default("{}")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  tenant            Tenant   @relation(fields: [tenantId], references: [id])
+  property          Property @relation(fields: [propertyId], references: [id])
+  createdBy         User     @relation(fields: [createdByUserId], references: [id])
+  rooms             Room[]
+  jobs              Job[]
+  auditLogs         AuditLog[]
+  remoteRequests    RemoteRequest[]
+
+  @@index([tenantId])
+  @@index([propertyId])
+  @@index([createdByUserId])
+  @@index([status])
+  @@map("inspections")
+}
+
+model Room {
+  id                String   @id @default(cuid())
+  inspectionId      String
+  tenantId          String
+  name              String
+  roomType          String   // BEDROOM, BATHROOM, KITCHEN, LIVING, DINING, EXTERIOR, HALLWAY, OTHER
+  sortOrder         Int
+  notes             String?
+  metadata          Json     @default("{}")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  inspection        Inspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  tenant            Tenant     @relation(fields: [tenantId], references: [id])
+  components        Component[]
+
+  @@index([inspectionId])
+  @@index([tenantId])
+  @@map("rooms")
+}
+
+model Component {
+  id                String   @id @default(cuid())
+  roomId            String
+  tenantId          String
+  name              String   // walls, ceiling, flooring, windows, doors, fixtures, appliances
+  conditionClean    Boolean  @default(true)
+  conditionUndamaged Boolean @default(true)
+  conditionWorking  Boolean  @default(true)
+  overviewComment   String?
+  humanEditedAt     DateTime?
+  aiAnalyzedAt      DateTime?
+  metadata          Json     @default("{}")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  room              Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  tenant            Tenant   @relation(fields: [tenantId], references: [id])
+  issues            Issue[]
+  media             MediaReference[]
+
+  @@index([roomId])
+  @@index([tenantId])
+  @@map("components")
+}
+
+model Issue {
+  id                String   @id @default(cuid())
+  componentId       String
+  tenantId          String
+  issueType         String   // crack, stain, chip, mould, wear, damage, missing, broken
+  severity          String   // MINOR, MODERATE, MAJOR, CRITICAL
+  confidence        Float?   // 0.0 to 1.0 for AI issues
+  notes             String?
+  source            String   // AI, HUMAN
+  aiResolution      String   @default("PENDING") // PENDING, ACCEPTED, REJECTED, OVERRIDDEN
+  linkedIssueId     String?  // Links AI issue to human issue when resolved
+  metadata          Json     @default("{}")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  component         Component @relation(fields: [componentId], references: [id], onDelete: Cascade)
+  tenant            Tenant    @relation(fields: [tenantId], references: [id])
+  linkedIssue       Issue?    @relation("IssueLinks", fields: [linkedIssueId], references: [id])
+  linkedBy          Issue[]   @relation("IssueLinks")
+
+  @@index([componentId])
+  @@index([tenantId])
+  @@index([source])
+  @@map("issues")
+}
+
+model MediaReference {
+  id                String   @id @default(cuid())
+  componentId       String
+  tenantId          String
+  mediaId           String   @unique // Reference to Media Service
+  mediaType         String   // IMAGE, VIDEO
+  label             String?  // WIDE, CLOSEUP, DAMAGE, OVERVIEW
+  uploadUrl         String?  // Temporary signed URL
+  viewUrl           String?  // Permanent view URL
+  thumbnailUrl      String?
+  metadata          Json     @default("{}")
+  uploadedAt        DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  component         Component @relation(fields: [componentId], references: [id], onDelete: Cascade)
+  tenant            Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@index([componentId])
+  @@index([tenantId])
+  @@index([mediaId])
+  @@map("media_references")
+}
+
+// ========== REMOTE INSPECTIONS ==========
+
+model RemoteRequest {
+  id                String   @id @default(cuid())
+  inspectionId      String
+  tenantId          String
+  token             String   @unique // Hashed token for access
+  status            String   // PENDING, IN_PROGRESS, SUBMITTED, APPROVED, REJECTED, EXPIRED
+  dueDate           DateTime
+  submittedAt       DateTime?
+  reviewedAt        DateTime?
+  checklistTemplate Json     // JSON checklist template
+  submission        Json?    // JSON submission data
+  reviewNotes       String?
+  metadata          Json     @default("{}")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  inspection        Inspection @relation(fields: [inspectionId], references: [id])
+  tenant            Tenant     @relation(fields: [tenantId], references: [id])
+
+  @@index([inspectionId])
+  @@index([tenantId])
+  @@index([token])
+  @@index([status])
+  @@map("remote_requests")
+}
+
+// ========== ORCHESTRATION ==========
+
+model Job {
+  id                String   @id @default(cuid())
+  inspectionId      String
+  tenantId          String
+  jobType           String   // ANALYZE_INSPECTION, ANALYZE_ROOM, DEEP_ANALYSIS, GENERATE_REPORT, TTS_GENERATION
+  status            String   // PENDING, RUNNING, COMPLETED, FAILED
+  payload           Json?    // Job-specific payload
+  result            Json?    // Job result data
+  error             String?  // Error message if failed
+  retryCount        Int      @default(0)
+  startedAt         DateTime?
+  completedAt       DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  inspection        Inspection @relation(fields: [inspectionId], references: [id])
+  tenant            Tenant     @relation(fields: [tenantId], references: [id])
+
+  @@index([inspectionId])
+  @@index([tenantId])
+  @@index([status])
+  @@index([jobType])
+  @@map("jobs")
+}
+
+// ========== AUDIT & EVIDENCE ==========
+
+model AuditLog {
+  id                String   @id @default(cuid())
+  tenantId          String
+  userId            String?
+  inspectionId      String?
+  action            String   // CREATE, UPDATE, DELETE, VIEW, ANALYZE, REPORT, FINALIZE
+  entityType        String   // INSPECTION, ROOM, COMPONENT, ISSUE, MEDIA, JOB
+  entityId          String
+  changes           Json?    // Before/after values
+  metadata          Json     @default("{}")
+  ipAddress         String?
+  userAgent         String?
+  createdAt         DateTime @default(now())
+
+  tenant            Tenant      @relation(fields: [tenantId], references: [id])
+  user              User?       @relation(fields: [userId], references: [id])
+  inspection        Inspection? @relation(fields: [inspectionId], references: [id])
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([inspectionId])
+  @@index([action])
+  @@index([entityType])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

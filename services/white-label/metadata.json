@@ -1,0 +1,5 @@
+{
+  "name": "White-Label Branding Service",
+  "description": "Multi-tenant backend service for managing branding settings, themes, assets, and report templates via Google Cloud Serverless stack.",
+  "requestFramePermissions": []
+}

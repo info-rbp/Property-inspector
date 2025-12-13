@@ -1,16 +1,40 @@
 {
-  "name": "property-inspector-monorepo",
+  "name": "proinspect-platform",
+  "version": "1.0.0",
+  "description": "Multi-tenant white-label property inspection platform",
   "private": true,
-  "packageManager": "pnpm@9.0.0",
   "workspaces": [
-    "apps/*",
-    "services/*",
-    "packages/*"
+    "packages/web",
+    "packages/gateway",
+    "services/*"
   ],
   "scripts": {
-    "dev": "pnpm -r dev",
-    "build": "pnpm -r build",
-    "lint": "pnpm -r lint",
-    "test": "pnpm -r test"
+    "dev": "concurrently \"npm run dev:gateway\" \"npm run dev:web\" \"npm run dev:services\"",
+    "dev:web": "npm run dev --workspace=packages/web",
+    "dev:gateway": "npm run dev --workspace=packages/gateway",
+    "dev:services": "npm run dev:media & npm run dev:jobs & npm run dev:billing",
+    "dev:media": "npm run dev --workspace=services/media-storage",
+    "dev:jobs": "npm run dev --workspace=services/background-jobs",
+    "dev:billing": "npm run dev --workspace=services/billing",
+    "build": "npm run build:gateway && npm run build:web && npm run build:services",
+    "build:web": "npm run build --workspace=packages/web",
+    "build:gateway": "npm run build --workspace=packages/gateway",
+    "build:services": "npm run build --workspace=services/media-storage && npm run build --workspace=services/background-jobs",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "setup": "npm install && npm run setup:db",
+    "setup:db": "npm run prisma:generate --workspace=packages/gateway && npm run prisma:migrate --workspace=packages/gateway",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "dotenv-cli": "^7.3.0",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
   }
 }

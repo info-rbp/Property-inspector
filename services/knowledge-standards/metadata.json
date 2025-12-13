@@ -1,0 +1,5 @@
+{
+  "name": "Knowledge & Standards Admin",
+  "description": "Admin control plane and logic simulator for the Property Inspection Knowledge Graph. Manages versioned standards and simulates the AI context retrieval engine.",
+  "requestFramePermissions": []
+}

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '{{branding.primaryColor}}',
+                        secondary: '{{branding.secondaryColor}}',
+                    },
+                    fontFamily: {
+                        sans: ['{{branding.fontFamily}}', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @page {
+            size: A4;
+            margin: 0;
+        }
+        body {
+            -webkit-print-color-adjust: exact;
+        }
+        .page-break {
+            page-break-before: always;
+        }
+    </style>
+</head>
+<body class="bg-white text-gray-800 font-sans text-sm">
+
+    <!-- Cover Page -->
+    <div class="h-[297mm] w-[210mm] relative flex flex-col justify-between p-12 border-b-8 border-primary">
+        <div>
+            {{#if branding.logoUrl}}
+            <img src="{{branding.logoUrl}}" alt="Logo" class="h-16 mb-8">
+            {{/if}}
+            <h1 class="text-5xl font-bold text-primary mb-4 uppercase">{{inspectionType}} Inspection Report</h1>
+            <h2 class="text-2xl text-gray-600">{{property.address}}</h2>
+        </div>
+        
+        <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-4 border-t pt-4">
+                <div>
+                    <p class="text-xs text-gray-500 uppercase">Prepared For</p>
+                    <p class="font-semibold">{{property.clientName}}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-500 uppercase">Inspection Date</p>
+                    <p class="font-semibold">{{property.inspectionDate}}</p>
+                </div>
+            </div>
+            <div class="text-xs text-gray-400">
+                Report Generated: {{meta.generatedAt}}
+            </div>
+        </div>
+
+        {{#if branding.showWatermark}}
+        <div class="absolute inset-0 flex items-center justify-center opacity-5 pointer-events-none z-0">
+            <span class="text-9xl font-bold -rotate-45 text-primary">OFFICIAL</span>
+        </div>
+        {{/if}}
+    </div>
+
+    <!-- Rooms Loop -->
+    {{#each rooms}}
+    <div class="page-break p-12 min-h-[297mm]">
+        <h2 class="text-2xl font-bold border-b-2 border-secondary pb-2 mb-6 text-primary">{{name}}</h2>
+        
+        {{#each components}}
+        <div class="mb-8 break-inside-avoid">
+            <div class="flex justify-between items-baseline mb-2">
+                <h3 class="text-lg font-semibold">{{name}}</h3>
+                <div class="flex space-x-4 text-xs">
+                    <span class="{{#if condition.isClean}}text-green-600{{else}}text-red-600{{/if}}">
+                        {{#if condition.isClean}}✓ Clean{{else}}✗ Not Clean{{/if}}
+                    </span>
+                    <span class="{{#if condition.isUndamaged}}text-green-600{{else}}text-red-600{{/if}}">
+                        {{#if condition.isUndamaged}}✓ Undamaged{{else}}✗ Damaged{{/if}}
+                    </span>
+                </div>
+            </div>
+
+            {{#if overviewComment}}
+            <p class="mb-3 text-gray-600 italic bg-gray-50 p-2 rounded">{{overviewComment}}</p>
+            {{/if}}
+
+            <!-- Issues -->
+            {{#if issues.length}}
+            <div class="mb-4">
+                <h4 class="text-xs font-bold uppercase text-red-500 mb-1">Issues Identified</h4>
+                <ul class="space-y-1">
+                    {{#each issues}}
+                    <li class="bg-red-50 border-l-4 border-red-500 p-2 text-sm">
+                        <span class="font-bold">{{type}}</span> ({{severity}}): {{notes}}
+                    </li>
+                    {{/each}}
+                </ul>
+            </div>
+            {{/if}}
+
+            <!-- Photos Grid -->
+            {{#if photos.length}}
+            <div class="grid grid-cols-3 gap-2 mt-2">
+                {{#each photos}}
+                <div>
+                    <!-- In real app, ensure URLs are accessible -->
+                    <div class="aspect-square bg-gray-200 rounded flex items-center justify-center text-xs text-gray-500">
+                        {{#if url}}
+                        <img src="{{url}}" class="w-full h-full object-cover rounded">
+                        {{else}}
+                        [Photo {{mediaId}}]
+                        {{/if}}
+                    </div>
+                    {{#if caption}}
+                    <p class="text-[10px] mt-1 text-center text-gray-500">{{caption}}</p>
+                    {{/if}}
+                </div>
+                {{/each}}
+            </div>
+            {{/if}}
+        </div>
+        <hr class="border-gray-200 my-4">
+        {{/each}}
+        
+        <div class="fixed bottom-0 left-0 right-0 p-8 text-center text-[10px] text-gray-400">
+            {{../branding.footerText}} | Page <span class="pageNumber"></span>
+        </div>
+    </div>
+    {{/each}}
+
+</body>
+</html>

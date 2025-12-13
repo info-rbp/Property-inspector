@@ -1,0 +1,182 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database for Gateway
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: proinspect_gateway
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MinIO for Local S3-compatible Storage
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Mailhog for Email Testing
+  mailhog:
+    image: mailhog/mailhog:latest
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # Web UI
+    environment:
+      MH_STORAGE: memory
+
+  # Gateway Service
+  gateway:
+    build:
+      context: ./packages/gateway
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/proinspect_gateway
+      REDIS_URL: redis://redis:6379
+      PORT: 3001
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./packages/gateway:/app
+      - /app/node_modules
+    command: npm run dev
+
+  # Media Storage Service
+  media-service:
+    build:
+      context: ./services/media-storage
+      dockerfile: Dockerfile
+    ports:
+      - "3002:3002"
+    environment:
+      NODE_ENV: development
+      PORT: 3002
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_BUCKET: proinspect-media
+      SERVICE_SECRET: ${SERVICE_SECRET:-dev-secret}
+    depends_on:
+      - minio
+    volumes:
+      - ./services/media-storage:/app
+      - /app/node_modules
+
+  # Background Jobs Service
+  jobs-service:
+    build:
+      context: ./services/background-jobs
+      dockerfile: Dockerfile
+    ports:
+      - "3003:3003"
+    environment:
+      NODE_ENV: development
+      PORT: 3003
+      REDIS_URL: redis://redis:6379
+      GATEWAY_URL: http://gateway:3001
+      SERVICE_SECRET: ${SERVICE_SECRET:-dev-secret}
+    depends_on:
+      - redis
+      - gateway
+    volumes:
+      - ./services/background-jobs:/app
+      - /app/node_modules
+
+  # Billing Service
+  billing-service:
+    build:
+      context: ./services/billing
+      dockerfile: Dockerfile
+    ports:
+      - "3004:3004"
+    environment:
+      NODE_ENV: development
+      PORT: 3004
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/proinspect_billing
+      SERVICE_SECRET: ${SERVICE_SECRET:-dev-secret}
+    depends_on:
+      - postgres
+    volumes:
+      - ./services/billing:/app
+      - /app/node_modules
+
+  # Audit Service
+  audit-service:
+    build:
+      context: ./services/audit
+      dockerfile: Dockerfile
+    ports:
+      - "3005:3005"
+    environment:
+      NODE_ENV: development
+      PORT: 3005
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/proinspect_audit
+      SERVICE_SECRET: ${SERVICE_SECRET:-dev-secret}
+    depends_on:
+      - postgres
+    volumes:
+      - ./services/audit:/app
+      - /app/node_modules
+
+  # Notifications Service
+  notifications-service:
+    build:
+      context: ./services/notifications
+      dockerfile: Dockerfile
+    ports:
+      - "3006:3006"
+    environment:
+      NODE_ENV: development
+      PORT: 3006
+      SMTP_HOST: mailhog
+      SMTP_PORT: 1025
+      SERVICE_SECRET: ${SERVICE_SECRET:-dev-secret}
+    depends_on:
+      - mailhog
+    volumes:
+      - ./services/notifications:/app
+      - /app/node_modules
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:

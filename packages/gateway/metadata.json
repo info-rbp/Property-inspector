@@ -1,0 +1,5 @@
+{
+  "name": "Inspection Gateway Client",
+  "description": "A frontend client for the Inspection Gateway, managing inspections, photos, and AI analysis workflows.",
+  "requestFramePermissions": []
+}

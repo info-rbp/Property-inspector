@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Identity Service Diagnostics</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; }
+        h1 { color: #333; }
+        .card { border: 1px solid #ddd; padding: 20px; margin-bottom: 20px; border-radius: 8px; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        button { cursor: pointer; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; font-weight: bold; font-size: 14px; }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; margin-right: 10px; width: 250px; }
+        pre { background: #f4f4f4; padding: 10px; overflow-x: auto; font-size: 12px; border-radius: 4px; border: 1px solid #eee; }
+        .success { color: #28a745; font-weight: 500; }
+        .error { color: #dc3545; font-weight: 500; }
+        .log-entry { margin-bottom: 5px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .step-title { font-weight: bold; margin-bottom: 10px; display: block; }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "dotenv": "https://esm.sh/dotenv@^17.2.3",
+    "zod": "https://esm.sh/zod@^4.1.13",
+    "@prisma/client": "https://esm.sh/@prisma/client@^7.1.0",
+    "jsonwebtoken": "https://esm.sh/jsonwebtoken@^9.0.3",
+    "crypto": "https://esm.sh/crypto@^1.0.1",
+    "express": "https://esm.sh/express@^5.2.1",
+    "bcryptjs": "https://esm.sh/bcryptjs@^3.0.3",
+    "uuid": "https://esm.sh/uuid@^13.0.0",
+    "cors": "https://esm.sh/cors@^2.8.5",
+    "helmet": "https://esm.sh/helmet@^8.1.0",
+    "morgan": "https://esm.sh/morgan@^1.10.1",
+    "express-rate-limit": "https://esm.sh/express-rate-limit@^8.2.1",
+    "assert": "https://esm.sh/assert@^2.1.0",
+    "@google/genai": "https://esm.sh/@google/genai@^1.33.0"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body>
+    <h1>Identity Service Diagnostics</h1>
+    <p>Use this harness to verify the API contract and security policies.</p>
+    
+    <!-- 1. Health & Ready -->
+    <div class="card">
+        <span class="step-title">1. Infrastructure Health</span>
+        <button onclick="checkHealth()">Check Health & Ready</button>
+        <div id="health-result" style="margin-top: 10px;"></div>
+    </div>
+
+    <!-- 2. JWKS -->
+    <div class="card">
+        <span class="step-title">2. JWKS Configuration</span>
+        <button onclick="checkJwks()">Fetch JWKS</button>
+        <div id="jwks-result" style="margin-top: 10px;"></div>
+    </div>
+
+    <!-- 3. Auth Flow -->
+    <div class="card">
+        <span class="step-title">3. Auth Lifecycle (Register -> Activate -> Login)</span>
+        <div style="margin-bottom: 15px;">
+            <input type="email" id="email" placeholder="email@example.com" value="test_user@example.com">
+            <input type="text" id="tenant" placeholder="Tenant Name" value="Diagnostic Corp">
+        </div>
+        <button onclick="runAuthFlow()">Run Full Auth Sequence</button>
+        <div id="auth-result" style="margin-top: 10px;"></div>
+    </div>
+
+    <!-- 4. Tenant Isolation -->
+    <div class="card">
+        <span class="step-title">4. Tenant Isolation Policy</span>
+        <p style="font-size: 14px; color: #666; margin-top: 0;">Attempts to access a resource belonging to a different tenant.</p>
+        <button onclick="checkIsolation()" id="btn-isolation" disabled>Verify Isolation</button>
+        <div id="isolation-result" style="margin-top: 10px;"></div>
+    </div>
+
+    <!-- 5. Service Auth -->
+    <div class="card">
+        <span class="step-title">5. Service Auth (API Key)</span>
+        <p style="font-size: 14px; color: #666; margin-top: 0;">Generates an API Key (as Owner) and uses it to access a protected service endpoint.</p>
+        <button onclick="checkServiceAuth()" id="btn-service" disabled>Create & Test API Key</button>
+        <div id="service-result" style="margin-top: 10px;"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3000/v1';
+        let currentState = {
+            token: null,
+            tenantId: null,
+            userId: null
+        };
+
+        const log = (id, msg, type='info') => {
+            const el = document.getElementById(id);
+            el.innerHTML += `<div class="log-entry ${type}">${new Date().toISOString().split('T')[1].split('.')[0]} - ${msg}</div>`;
+        };
+        const clear = (id) => document.getElementById(id).innerHTML = '';
+
+        async function checkHealth() {
+            clear('health-result');
+            try {
+                const h = await fetch(`${API_URL}/health`).then(r => r.json());
+                log('health-result', `Health: OK (Uptime: ${h.uptimeSeconds?.toFixed(0)}s)`, 'success');
+                
+                const r = await fetch(`${API_URL}/ready`).then(r => r.json());
+                log('health-result', `Ready: ${r.ready ? 'YES' : 'NO'}`, r.ready ? 'success' : 'error');
+                if (!r.ready) log('health-result', JSON.stringify(r.checks), 'error');
+            } catch (e) {
+                log('health-result', `Connection Failed: ${e.message}`, 'error');
+            }
+        }
+
+        async function checkJwks() {
+            clear('jwks-result');
+            try {
+                const j = await fetch(`${API_URL}/.well-known/jwks.json`).then(r => r.json());
+                if (j.keys && j.keys.length > 0) {
+                    log('jwks-result', `Found ${j.keys.length} Key(s). KID: ${j.keys[0].kid}`, 'success');
+                    log('jwks-result', `<pre>${JSON.stringify(j.keys[0], null, 2)}</pre>`);
+                } else {
+                    log('jwks-result', 'No keys found in JWKS response', 'error');
+                }
+            } catch (e) {
+                log('jwks-result', e.message, 'error');
+            }
+        }
+
+        async function runAuthFlow() {
+            clear('auth-result');
+            const email = document.getElementById('email').value;
+            const tenantName = document.getElementById('tenant').value;
+            const password = 'password123';
+            
+            // Randomize email to allow repeated tests
+            const randomEmail = email.replace('@', `_${Math.floor(Math.random() * 1000)}@`);
+
+            try {
+                // 1. Register
+                log('auth-result', `Registering as ${randomEmail}...`);
+                const regRes = await fetch(`${API_URL}/auth/register`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ email: randomEmail, password, fullName: 'Diag User', tenantName })
+                });
+                
+                const regData = await regRes.json();
+                if (!regRes.ok) throw new Error(regData.error?.message || 'Registration failed');
+                
+                const actToken = regData.activationToken; 
+                log('auth-result', `Registered. Tenant ID: ${regData.tenantId}`, 'success');
+                
+                if (!actToken) throw new Error('Diagnostic mode: Activation token not returned by server.');
+
+                // 2. Activate
+                log('auth-result', 'Activating Account...');
+                const actRes = await fetch(`${API_URL}/auth/activate`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ token: actToken })
+                });
+                const actData = await actRes.json();
+                if (!actRes.ok) throw new Error(actData.error?.message || 'Activation failed');
+                
+                currentState.token = actData.accessToken;
+                currentState.tenantId = actData.tenantId;
+                currentState.userId = regData.userId;
+                
+                log('auth-result', 'Account Activated & Logged In.', 'success');
+                log('auth-result', `<pre>JWT: ${currentState.token.substring(0,25)}...</pre>`);
+                
+                // Enable next steps
+                document.getElementById('btn-isolation').disabled = false;
+                document.getElementById('btn-service').disabled = false;
+
+            } catch (e) {
+                log('auth-result', e.message, 'error');
+            }
+        }
+
+        async function checkIsolation() {
+            clear('isolation-result');
+            if (!currentState.token) return log('isolation-result', 'Please run Auth Flow first', 'error');
+
+            try {
+                // 1. Access Own Tenant
+                log('isolation-result', `Attempting access to OWN tenant (${currentState.tenantId})...`);
+                const ownRes = await fetch(`${API_URL}/tenants/${currentState.tenantId}`, {
+                    headers: { 'Authorization': `Bearer ${currentState.token}` }
+                });
+                if (ownRes.ok) {
+                    log('isolation-result', 'Access Granted (200 OK)', 'success');
+                } else {
+                    log('isolation-result', `Unexpected Failure: ${ownRes.status}`, 'error');
+                }
+
+                // 2. Access Foreign Tenant
+                const fakeId = '00000000-0000-0000-0000-000000000000';
+                log('isolation-result', `Attempting access to FOREIGN tenant (${fakeId})...`);
+                const foreignRes = await fetch(`${API_URL}/tenants/${fakeId}`, {
+                    headers: { 'Authorization': `Bearer ${currentState.token}` }
+                });
+                
+                if (foreignRes.status === 403) {
+                    log('isolation-result', 'Access Denied (403 Forbidden) - ISOLATION CONFIRMED', 'success');
+                } else {
+                    log('isolation-result', `Isolation Failed. Expected 403, got ${foreignRes.status}`, 'error');
+                }
+
+            } catch (e) {
+                log('isolation-result', e.message, 'error');
+            }
+        }
+
+        async function checkServiceAuth() {
+            clear('service-result');
+            if (!currentState.token) return log('service-result', 'Please run Auth Flow first', 'error');
+
+            try {
+                // 1. Create Key
+                log('service-result', 'Creating API Key via Admin API...');
+                const createRes = await fetch(`${API_URL}/api-keys`, {
+                    method: 'POST',
+                    headers: { 
+                        'Authorization': `Bearer ${currentState.token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name: 'Diagnostic Key', scopes: ['read'] })
+                });
+                const keyData = await createRes.json();
+                if (!createRes.ok) throw new Error(keyData.error?.message || 'Key creation failed');
+                
+                const apiKey = keyData.key;
+                log('service-result', `API Key Created: ${apiKey.substring(0, 15)}...`, 'success');
+
+                // 2. Use Key
+                log('service-result', 'Calling Protected Endpoint /echo-service-auth...');
+                const testRes = await fetch(`${API_URL}/echo-service-auth`, {
+                    headers: { 'x-api-key': apiKey }
+                });
+                
+                if (testRes.ok) {
+                    const echo = await testRes.json();
+                    log('service-result', `Success: ${echo.message}`, 'success');
+                } else {
+                    log('service-result', `Auth Failed: ${testRes.status}`, 'error');
+                }
+
+            } catch (e) {
+                log('service-result', e.message, 'error');
+            }
+        }
+    </script>
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>

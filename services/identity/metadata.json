@@ -1,0 +1,5 @@
+{
+  "name": "Identity & Tenant Management Service",
+  "description": "A centralized identity provider and tenant management system for a property inspection SaaS, featuring RBAC, multi-tenancy, and feature flagging.",
+  "requestFramePermissions": []
+}

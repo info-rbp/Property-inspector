@@ -1,0 +1,5 @@
+{
+  "name": "Inspection Platform",
+  "description": "A comprehensive property inspection tool that uses AI to analyze photos and generate condition reports, exportable to PDF.",
+  "requestFramePermissions": []
+}
