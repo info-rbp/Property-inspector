@@ -1,41 +1,16 @@
 {
-  "name": "inspection-platform",
+  "name": "property-inspector-monorepo",
   "private": true,
-  "version": "1.0.0",
-  "type": "module",
+  "packageManager": "pnpm@9.0.0",
+  "workspaces": [
+    "apps/*",
+    "services/*",
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "vite",
-    "dev:sandbox": "wrangler pages dev dist --ip 0.0.0.0 --port 3000",
-    "build:server": "vite build",
-    "build:client": "vite build --mode client",
-    "build": "npm run build:server && npm run build:client && npm run copy:static",
-    "copy:static": "cp public/index.html dist/ 2>/dev/null || true",
-    "preview": "wrangler pages dev dist",
-    "deploy": "npm run build && wrangler pages deploy dist",
-    "deploy:prod": "npm run build && wrangler pages deploy dist --project-name inspection-platform",
-    "cf-typegen": "wrangler types --env-interface CloudflareBindings",
-    "clean-port": "fuser -k 3000/tcp 2>/dev/null || true",
-    "test": "curl http://localhost:3000"
-  },
-  "dependencies": {
-    "@google/generative-ai": "^0.21.0",
-    "hono": "^4.0.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "lucide-react": "^0.456.0",
-    "idb": "^8.0.0",
-    "jspdf": "^2.5.2",
-    "html2canvas": "^1.4.1"
-  },
-  "devDependencies": {
-    "@cloudflare/workers-types": "^4.20250705.0",
-    "@hono/vite-cloudflare-pages": "^0.4.2",
-    "@types/node": "^22.14.0",
-    "@types/react": "^18.3.12",
-    "@types/react-dom": "^18.3.1",
-    "@vitejs/plugin-react": "^4.3.4",
-    "typescript": "^5.8.2",
-    "vite": "^5.0.0",
-    "wrangler": "^3.78.0"
+    "dev": "pnpm -r dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test"
   }
 }
