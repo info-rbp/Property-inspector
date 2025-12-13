@@ -11,6 +11,16 @@ jobs:
   import:
     runs-on: ubuntu-latest
     steps:
+      - name: Fail early if MONOREPO_PAT missing
+        if: ${{ !secrets.MONOREPO_PAT }}
+        run: |
+          echo "Secret MONOREPO_PAT not set"
+          echo ""
+          echo "This workflow requires a Personal Access Token stored as the repository secret MONOREPO_PAT"
+          echo "with the 'repo' scope (full control of private repositories) so it can fetch private"
+          echo "source repos and push branches / create PRs. Add the secret and re-run the workflow."
+          exit 1
+
       - name: Checkout monorepo
         uses: actions/checkout@v4
         with:
@@ -24,7 +34,7 @@ jobs:
 
       - name: Create import branch
         run: |
-          git checkout -b chore/subtree-import-services
+          git checkout -B chore/subtree-import-services
 
       - name: Subtree import script
         env:
@@ -43,6 +53,16 @@ jobs:
             local url="$1"
             local au
             au="$(auth_url "$url")"
+
+            # Try to read the remote's default branch via a symbolic ref to HEAD
+            local headref
+            headref="$(git ls-remote --symref "$au" HEAD 2>/dev/null | sed -n 's@^ref: refs/heads/@@p' | head -n1 || true)"
+            if [ -n "$headref" ]; then
+              echo "$headref"
+              return 0
+            fi
+
+            # Fallback to common names
             if git ls-remote --exit-code --heads "$au" master >/dev/null 2>&1; then
               echo master; return 0
             fi
@@ -77,7 +97,7 @@ jobs:
 
             branch="$(detect_branch "$url")"
             if [ -z "$branch" ]; then
-              echo "ERROR: Could not detect master/main for $url"
+              echo "ERROR: Could not detect default branch (master/main) for $url"
               git ls-remote --heads "$au" | head -n 40
               exit 1
             fi
@@ -103,11 +123,11 @@ jobs:
           import_subtree billing https://github.com/info-rbp/PIA---Billing-Usage-Metering-Application.git services/billing-usage-metering
           import_subtree notify https://github.com/info-rbp/PIA---Notifications-Application.git services/notifications
 
-          # Update stacks report
+          # Update stacks report (no leading indentation so content is exact)
           cat > docs/STACKS.md <<'EOF'
-          # Service Stack Detection
-          Generated after subtree imports.
-          EOF
+# Service Stack Detection
+Generated after subtree imports.
+EOF
 
           scan_stack () {
             local dir="$1"
@@ -131,14 +151,26 @@ jobs:
 
       - name: Push branch
         run: |
-          git push -u origin chore/subtree-import-services
+          git push -u origin chore/subtree-import-services --force-with-lease
+
+      - name: Ensure gh CLI available
+        run: |
+          if ! command -v gh >/dev/null 2>&1; then
+            echo "gh CLI not found; installing..."
+            sudo apt-get update && sudo apt-get install -y gh
+          fi
 
       - name: Open PR
         env:
           GH_TOKEN: ${{ secrets.MONOREPO_PAT || github.token }}
         run: |
-          gh pr create \
-            --title "Subtree import: add platform services to monorepo" \
-            --body "Imports platform repositories into apps/* and services/* using git subtree (--squash). Also updates docs/STACKS.md." \
-            --base main \
-            --head chore/subtree-import-services
+          existing_pr=$(gh pr list --repo "${GITHUB_REPOSITORY}" --head chore/subtree-import-services --json url --jq '.[0].url' || true)
+          if [ -n "$existing_pr" ]; then
+            echo "PR already exists: $existing_pr"
+          else
+            gh pr create \
+              --title "Subtree import: add platform services to monorepo" \
+              --body "Imports platform repositories into apps/* and services/* using git subtree (--squash). Also updates docs/STACKS.md." \
+              --base main \
+              --head chore/subtree-import-services
+          fi
