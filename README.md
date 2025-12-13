@@ -1,6 +1,25 @@
-# ProInspect Platform
+# ProInspect Platform - Property Inspection System
 
-Multi-tenant, white-label property inspection platform for agencies, inspectors, and landlords to produce defensible, consistent inspection outcomes and professional reports.
+[![License](https://img.shields.io/badge/license-Proprietary-red.svg)](LICENSE)
+[![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)](https://nodejs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue.svg)](https://www.typescriptlang.org)
+[![React](https://img.shields.io/badge/React-18.2-61dafb.svg)](https://reactjs.org)
+[![Fastify](https://img.shields.io/badge/Fastify-4.26-black.svg)](https://www.fastify.io)
+
+🏠 **Enterprise-grade property inspection platform** for Australian real estate agencies, property managers, and professional inspectors.
+
+Multi-tenant, white-label SaaS platform leveraging AI-powered photo analysis to produce defensible, consistent inspection outcomes and professional reports across all Australian jurisdictions.
+
+## 🎯 Key Features
+
+- 📸 **Evidence-First Design** - Photos as primary evidence with AI-powered analysis
+- 🏢 **Multi-Tenant Architecture** - Complete tenant isolation and white-label branding
+- 🗺️ **Australian Jurisdiction Support** - Templates and rules for all states/territories
+- 🤖 **AI-Powered Analysis** - Automated issue detection with human review workflow
+- 📱 **Remote Inspections** - Tenant self-service with token-based access
+- 📄 **Professional Reports** - Automated PDF generation with custom branding
+- 🔐 **Audit Trail** - Immutable evidence chain for dispute resolution
+- 💳 **Subscription Management** - Feature gating and usage metering
 
 ## 🚀 Quick Start
 
