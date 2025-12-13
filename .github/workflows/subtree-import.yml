@@ -1,0 +1,144 @@
+name: Subtree Import
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout monorepo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.MONOREPO_PAT || github.token }}
+
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create import branch
+        run: |
+          git checkout -b chore/subtree-import-services
+
+      - name: Subtree import script
+        env:
+          TOKEN: ${{ secrets.MONOREPO_PAT || github.token }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p apps services docs
+
+          auth_url () {
+            local url="$1"
+            echo "$url" | sed "s#https://github.com/#https://x-access-token:${TOKEN}@github.com/#"
+          }
+
+          detect_branch () {
+            local url="$1"
+            local au
+            au="$(auth_url "$url")"
+            if git ls-remote --exit-code --heads "$au" master >/dev/null 2>&1; then
+              echo master; return 0
+            fi
+            if git ls-remote --exit-code --heads "$au" main >/dev/null 2>&1; then
+              echo main; return 0
+            fi
+            echo ""; return 1
+          }
+
+          ensure_empty_dest () {
+            local dest="$1"
+            if [ -d "$dest" ] && [ "$(ls -A "$dest" 2>/dev/null)" != "" ]; then
+              echo "Destination '$dest' exists and is not empty. Aborting."
+              exit 1
+            fi
+          }
+
+          import_subtree () {
+            local remote_name="$1"
+            local url="$2"
+            local dest="$3"
+
+            echo "==> Importing $url into $dest (remote: $remote_name)"
+            ensure_empty_dest "$dest"
+
+            local au branch
+            au="$(auth_url "$url")"
+
+            git remote remove "$remote_name" >/dev/null 2>&1 || true
+            git remote add "$remote_name" "$au"
+            git fetch "$remote_name" --prune
+
+            branch="$(detect_branch "$url")"
+            if [ -z "$branch" ]; then
+              echo "ERROR: Could not detect master/main for $url"
+              git ls-remote --heads "$au" | head -n 40
+              exit 1
+            fi
+
+            git subtree add --prefix="$dest" "$remote_name" "$branch" --squash
+            git commit --amend -m "chore(subtree): import $(basename "$url") into $dest" || true
+          }
+
+          # Apps
+          import_subtree gateway https://github.com/info-rbp/PIA---Inspection-Gateway-Application.git apps/gateway
+          import_subtree property_report https://github.com/info-rbp/Property-Condition-Report.git apps/property-condition-report
+
+          # Services
+          import_subtree media https://github.com/info-rbp/PIA---Media-Storage-Application.git services/media-storage
+          import_subtree analysis https://github.com/info-rbp/PIA---Photo-Analysis.git services/photo-analysis
+          import_subtree jobs https://github.com/info-rbp/PIA---Background-Jobs-Orchestration-Application.git services/jobs-orchestration
+          import_subtree identity https://github.com/info-rbp/PIA---IDENTITY-AND-TENANT-MANAGEMENT-SERVICE.git services/identity-tenant
+          import_subtree whitelabel https://github.com/info-rbp/PIA---Whitelabelling.git services/whitelabelling
+          import_subtree reports https://github.com/info-rbp/PIA-Report-Generation-App.git services/report-generation
+          import_subtree audit https://github.com/info-rbp/PIA---Audit-Evidence-Application.git services/audit-evidence
+          import_subtree standards_admin https://github.com/info-rbp/PIA---Knowledge-and-Standards-Admin.git services/knowledge-standards-admin
+          import_subtree knowledge_hub https://github.com/info-rbp/PIA---Knowledge-Hub.git services/knowledge-hub
+          import_subtree billing https://github.com/info-rbp/PIA---Billing-Usage-Metering-Application.git services/billing-usage-metering
+          import_subtree notify https://github.com/info-rbp/PIA---Notifications-Application.git services/notifications
+
+          # Update stacks report
+          cat > docs/STACKS.md <<'EOF'
+          # Service Stack Detection
+          Generated after subtree imports.
+          EOF
+
+          scan_stack () {
+            local dir="$1"
+            echo "" >> docs/STACKS.md
+            echo "## $dir" >> docs/STACKS.md
+
+            local found=0
+            [ -f "$dir/package.json" ] && echo "- Node/TypeScript (package.json)" >> docs/STACKS.md && found=1
+            ([ -f "$dir/requirements.txt" ] || [ -f "$dir/pyproject.toml" ]) && echo "- Python (requirements.txt/pyproject.toml)" >> docs/STACKS.md && found=1
+            ls "$dir"/*.csproj >/dev/null 2>&1 && echo "- .NET (*.csproj)" >> docs/STACKS.md && found=1
+            (find "$dir" -maxdepth 2 -name Dockerfile | grep -q Dockerfile) && echo "- Docker (Dockerfile)" >> docs/STACKS.md && found=1
+            [ $found -eq 0 ] && echo "- Unknown (no common stack markers found)" >> docs/STACKS.md
+          }
+
+          for d in apps/* services/*; do
+            [ -d "$d" ] && scan_stack "$d"
+          done
+
+          git add docs/STACKS.md
+          git commit -m "docs: update stacks report after subtree imports"
+
+      - name: Push branch
+        run: |
+          git push -u origin chore/subtree-import-services
+
+      - name: Open PR
+        env:
+          GH_TOKEN: ${{ secrets.MONOREPO_PAT || github.token }}
+        run: |
+          gh pr create \
+            --title "Subtree import: add platform services to monorepo" \
+            --body "Imports platform repositories into apps/* and services/* using git subtree (--squash). Also updates docs/STACKS.md." \
+            --base main \
+            --head chore/subtree-import-services
