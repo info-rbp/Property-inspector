@@ -1,49 +1,31 @@
-# Gateway Service Dockerfile
-FROM node:20-alpine AS base
+# syntax=docker/dockerfile:1
 
-# Install dependencies only when needed
-FROM base AS deps
-RUN apk add --no-cache libc6-compat
+FROM node:20-slim AS deps
 WORKDIR /app
+COPY package.json package-lock.json pnpm-workspace.yaml turbo.json ./
+COPY packages/gateway/package.json packages/gateway/package.json
+RUN npm ci
 
-# Install dependencies
-COPY package*.json ./
-COPY prisma ./prisma/
-RUN npm ci --only=production
-RUN npm install -g prisma
-RUN npx prisma generate
-
-# Development image
-FROM base AS dev
+FROM node:20-slim AS build
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-COPY . .
-RUN npm install
+COPY package.json package-lock.json pnpm-workspace.yaml turbo.json ./
+COPY packages packages
+COPY services services
+COPY apps apps
+RUN npm run build --workspace packages/gateway
 
-# Build the application
-FROM base AS builder
+FROM node:20-slim AS prod-deps
 WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
-RUN npm run build
+COPY package.json package-lock.json pnpm-workspace.yaml turbo.json ./
+COPY packages/gateway/package.json packages/gateway/package.json
+RUN npm ci --omit=dev
 
-# Production image
-FROM base AS runner
+FROM node:20-slim AS runner
 WORKDIR /app
-
-ENV NODE_ENV production
-
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nodejs
-
-# Copy built application
-COPY --from=builder /app/dist ./dist
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/prisma ./prisma
-
-USER nodejs
-
-EXPOSE 3001
-
-CMD ["npm", "start"]
+ENV NODE_ENV=production
+COPY --from=prod-deps /app/node_modules ./node_modules
+COPY --from=build /app/packages/gateway/dist ./packages/gateway/dist
+COPY packages/gateway/prisma ./packages/gateway/prisma
+EXPOSE 8080
+CMD ["node", "packages/gateway/dist/server.js"]

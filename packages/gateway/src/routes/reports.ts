@@ -1,6 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import { PrismaClient } from '@prisma/client';
 import { AppError } from '../middleware/error';
+import { config } from '../config';
 
 const prisma = new PrismaClient();
 
@@ -128,7 +129,7 @@ export const reportRoutes: FastifyPluginAsync = async (app) => {
     }
 
     // In production, get signed URL from Media Service
-    const downloadUrl = `${process.env.MEDIA_SERVICE_URL}/download/${inspection.reportMediaId}`;
+    const downloadUrl = `${config.MEDIA_SERVICE_URL}/download/${inspection.reportMediaId}`;
 
     // Log audit event
     await prisma.auditLog.create({

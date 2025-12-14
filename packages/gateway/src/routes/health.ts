@@ -1,5 +1,6 @@
 import { FastifyPluginAsync } from 'fastify';
 import { PrismaClient } from '@prisma/client';
+import { config } from '../config';
 
 const prisma = new PrismaClient();
 
@@ -38,7 +39,7 @@ export const healthRoutes: FastifyPluginAsync = async (app) => {
     }
 
     // Check Redis if configured
-    if (process.env.REDIS_URL) {
+    if (config.REDIS_URL) {
       try {
         const startTime = Date.now();
         // Add Redis health check here when implemented
@@ -59,9 +60,9 @@ export const healthRoutes: FastifyPluginAsync = async (app) => {
 
     // Check downstream services
     const services = [
-      { name: 'media-service', url: process.env.MEDIA_SERVICE_URL },
-      { name: 'jobs-service', url: process.env.JOBS_SERVICE_URL },
-      { name: 'billing-service', url: process.env.BILLING_SERVICE_URL }
+      { name: 'media-service', url: config.MEDIA_SERVICE_URL },
+      { name: 'jobs-service', url: config.JOBS_SERVICE_URL },
+      { name: 'billing-service', url: config.BILLING_SERVICE_URL }
     ];
 
     for (const service of services) {
@@ -101,10 +102,10 @@ export const healthRoutes: FastifyPluginAsync = async (app) => {
   app.get('/version', async (request, reply) => {
     return {
       service: 'gateway',
-      version: process.env.npm_package_version || '1.0.0',
-      commit: process.env.GIT_COMMIT || 'unknown',
-      buildTime: process.env.BUILD_TIME || 'unknown',
-      environment: process.env.NODE_ENV || 'development'
+      version: config.PACKAGE_VERSION,
+      commit: config.GIT_COMMIT || 'unknown',
+      buildTime: config.BUILD_TIME || 'unknown',
+      environment: config.NODE_ENV || 'development'
     };
   });
 };
