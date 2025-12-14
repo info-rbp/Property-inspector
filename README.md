@@ -58,7 +58,7 @@ npm run setup:db
 npm run dev
 
 # Or start individually
-npm run dev:web      # Web application on http://localhost:5173
+npm run dev:web      # Web application on http://localhost:3000
 npm run dev:gateway  # Gateway API on http://localhost:3001
 ```
 
