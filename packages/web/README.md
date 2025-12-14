@@ -15,6 +15,18 @@ View your app in AI Studio: https://ai.studio/apps/drive/1wEI9WU3pZuVQu2EGk-j6L8
 
 1. Install dependencies:
    `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
+2. Set the `VITE_API_KEY` in `.env.local` to your Gemini API key (this is how the app reads it at runtime)
 3. Run the app:
    `npm run dev`
+
+## Firebase Hosting runtime config
+
+If you are deploying or previewing via Firebase Hosting, make sure the same `VITE_API_KEY` is available to the client by applyi
+ng your environment file:
+
+```
+firebase hosting:env:apply firebase-hosting.env
+```
+
+Copy `firebase-hosting.env.example` to `firebase-hosting.env` and populate it with `VITE_API_KEY=your-gemini-api-key` before ru
+nning the command.
