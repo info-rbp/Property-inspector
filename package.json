@@ -5,34 +5,35 @@
   "private": true,
   "packageManager": "pnpm@8.15.8",
   "workspaces": [
-    "packages/web",
-    "packages/gateway",
-    "services/*"
+    "apps/*",
+    "functions/*",
+    "services/*",
+    "packages/*"
   ],
   "scripts": {
     "dev": "concurrently \"npm run dev:gateway\" \"npm run dev:web\" \"npm run dev:services\"",
-    "dev:web": "npm run dev --workspace=packages/web",
-    "dev:gateway": "npm run dev --workspace=packages/gateway",
+    "dev:web": "npm run dev --workspace=@proinspect/web",
+    "dev:gateway": "npm run dev --workspace=@proinspect/gateway",
     "dev:services": "npm run dev:media & npm run dev:jobs & npm run dev:billing",
-    "dev:media": "npm run dev --workspace=services/media-storage",
-    "dev:jobs": "npm run dev --workspace=services/background-jobs",
-    "dev:billing": "npm run dev --workspace=services/billing",
+    "dev:media": "npm run dev --workspace=media-storage",
+    "dev:jobs": "npm run dev --workspace=background-jobs",
+    "dev:billing": "npm run dev --workspace=billing",
     "build": "npm run build:gateway && npm run build:web && npm run build:services",
-    "build:web": "npm run build --workspace=packages/web",
-    "build:gateway": "npm run build --workspace=packages/gateway",
-    "build:services": "npm run build --workspace=services/media-storage && npm run build --workspace=services/background-jobs",
+    "build:web": "npm run build --workspace=@proinspect/web",
+    "build:gateway": "npm run build --workspace=@proinspect/gateway",
+    "build:services": "npm run build --workspace=media-storage && npm run build --workspace=background-jobs",
     "test": "npm run test --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "setup": "npm install && npm run setup:db",
-    "setup:db": "npm run prisma:generate --workspace=packages/gateway && npm run prisma:migrate --workspace=packages/gateway",
+    "setup:db": "npm run prisma:generate --workspace=@proinspect/gateway && npm run prisma:migrate --workspace=@proinspect/gateway",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
     "docker:logs": "docker-compose logs -f"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
-    "dotenv-cli": "^7.3.0",
-    "typescript": "^5.3.3"
+    "dotenv-cli": "^7.4.2",
+    "typescript": "^5.4.5"
   },
   "engines": {
     "node": ">=18.0.0",

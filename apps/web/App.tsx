@@ -5,8 +5,10 @@ import ClientManager from './components/ClientManager';
 import ProposalGenerator from './components/ProposalGenerator';
 import Settings from './components/Settings';
 import FeatureRequest from './components/FeatureRequest';
+import RemoteManager from './components/RemoteManager';
+import TenantInspection from './components/TenantInspection';
 
-type ActiveTool = 'dashboard' | 'condition-report' | 'routine-inspection' | 'exit-inspection' | 'clients' | 'proposals' | 'settings' | 'feature-request';
+type ActiveTool = 'dashboard' | 'condition-report' | 'routine-inspection' | 'exit-inspection' | 'clients' | 'proposals' | 'settings' | 'feature-request' | 'remote-inspection';
 
 const App: React.FC = () => {
   const [activeTool, setActiveTool] = useState<ActiveTool>('dashboard');
@@ -28,7 +30,14 @@ const App: React.FC = () => {
         return <Settings />;
       case 'feature-request':
         return <FeatureRequest />;
+      case 'remote-inspection':
+        return <RemoteManager />;
       default:
+        const url = new URL(window.location.href);
+        if (url.pathname.startsWith('/remote/')) {
+          const token = url.pathname.split('/').pop();
+          return <TenantInspection token={token} />;
+        }
         return null;
     }
   };
@@ -68,6 +77,7 @@ const App: React.FC = () => {
               <NavButton tool="condition-report" icon={FileText} label="Entry Report" />
               <NavButton tool="routine-inspection" icon={ClipboardCheck} label="Routine" />
               <NavButton tool="exit-inspection" icon={LogOut} label="Exit" />
+              <NavButton tool="remote-inspection" icon={Users} label="Remote" />
               <div className="h-6 w-px bg-gray-200 mx-2"></div>
               <NavButton tool="clients" icon={Building} label="Properties" />
               <NavButton tool="proposals" icon={FileOutput} label="Proposals" />
@@ -96,6 +106,7 @@ const App: React.FC = () => {
                <NavButton tool="condition-report" icon={FileText} label="Entry Report" />
                <NavButton tool="routine-inspection" icon={ClipboardCheck} label="Routine Inspection" />
                <NavButton tool="exit-inspection" icon={LogOut} label="Exit Inspection" />
+               <NavButton tool="remote-inspection" icon={Users} label="Remote Inspection" />
                <NavButton tool="clients" icon={Building} label="Properties" />
                <NavButton tool="proposals" icon={FileOutput} label="Proposals" />
                <NavButton tool="feature-request" icon={Lightbulb} label="Feature Request" />
@@ -136,7 +147,7 @@ const App: React.FC = () => {
 
                 <div 
                   onClick={() => setActiveTool('routine-inspection')}
-                  className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer group"
+                  className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md hover:border-green-300 transition-all cursor-pointer group"
                 >
                     <div className="w-12 h-12 bg-green-50 text-green-600 rounded-lg flex items-center justify-center mb-4 group-hover:bg-green-100 transition-colors">
                         <ClipboardCheck size={28} />
@@ -152,7 +163,7 @@ const App: React.FC = () => {
 
                 <div 
                   onClick={() => setActiveTool('exit-inspection')}
-                  className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer group"
+                  className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md hover:border-orange-300 transition-all cursor-pointer group"
                 >
                     <div className="w-12 h-12 bg-orange-50 text-orange-600 rounded-lg flex items-center justify-center mb-4 group-hover:bg-orange-100 transition-colors">
                         <LogOut size={28} />
@@ -163,6 +174,22 @@ const App: React.FC = () => {
                     </p>
                     <div className="flex items-center text-orange-600 text-sm font-semibold group-hover:translate-x-1 transition-transform">
                         Start Exit Report <ArrowRight size={16} className="ml-1" />
+                    </div>
+                </div>
+                
+                <div 
+                  onClick={() => setActiveTool('remote-inspection')}
+                  className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md hover:border-cyan-300 transition-all cursor-pointer group"
+                >
+                    <div className="w-12 h-12 bg-cyan-50 text-cyan-600 rounded-lg flex items-center justify-center mb-4 group-hover:bg-cyan-100 transition-colors">
+                        <Users size={28} />
+                    </div>
+                    <h3 className="text-lg font-bold text-gray-900 mb-2">Remote Inspection</h3>
+                    <p className="text-gray-500 text-sm mb-6">
+                        Manage and review tenant-led remote inspections.
+                    </p>
+                    <div className="flex items-center text-cyan-600 text-sm font-semibold group-hover:translate-x-1 transition-transform">
+                        Manage Remotes <ArrowRight size={16} className="ml-1" />
                     </div>
                 </div>
 

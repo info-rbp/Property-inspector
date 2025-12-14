@@ -1,5 +1,5 @@
 {
-  "name": "inspection-ui",
+  "name": "@proinspect/web",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -11,17 +11,14 @@
   "dependencies": {
     "@emotion/react": "^11.11.4",
     "@emotion/styled": "^11.11.5",
-    "@google/generative-ai": "^0.24.1",
-    "@hono/vite-cloudflare-pages": "^0.4.3",
-    "@mui/icons-material": "^5.15.18",
     "@mui/material": "^5.15.18",
-    "hono": "^4.11.0",
+    "@mui/x-data-grid": "^7.5.0",
     "react": "^19.0.0-rc-f994737d14-20240522",
     "react-dom": "^19.0.0-rc-f994737d14-20240522",
+    "react-router-dom": "^6.23.1",
     "uuid": "^9.0.1"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20251213.0",
     "@types/node": "^20.12.12",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",

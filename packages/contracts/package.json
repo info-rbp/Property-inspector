@@ -1,5 +1,25 @@
 {
-  "name": "@property-inspector/contracts",
-  "private": true,
-  "version": "0.0.0"
+  "name": "@proinspect/contracts",
+  "version": "1.0.0",
+  "description": "Shared data contracts for ProInspect services",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint .",
+    "test": "jest"
+  },
+  "keywords": [
+    "api-contracts",
+    "typescript"
+  ],
+  "author": "ProInspect",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@types/node": "^20.12.12",
+    "typescript": "^5.4.5"
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
+  }
 }

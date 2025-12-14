@@ -39,3 +39,32 @@ export enum ReportViewMode {
   EDIT = 'EDIT',
   PREVIEW = 'PREVIEW'
 }
+
+export enum RemoteInspectionStatus {
+  SENT = 'SENT',
+  IN_PROGRESS = 'IN_PROGRESS',
+  SUBMITTED = 'SUBMITTED',
+  REVIEWED = 'REVIEWED',
+}
+
+export interface Property {
+  id: string;
+  address: string;
+  ownerName: string;
+  tenantName?: string;
+  tenantEmail?: string;
+  defaultRooms?: string[];
+}
+
+export interface RemoteInspectionRequest {
+  id: string;
+  token: string;
+  propertyId: string;
+  propertyAddress: string;
+  tenantName: string;
+  tenantEmail: string;
+  status: RemoteInspectionStatus;
+  reportType: ReportType;
+  dueDate: string;
+  data: ReportData;
+}

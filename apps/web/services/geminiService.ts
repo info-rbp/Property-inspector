@@ -1,7 +1,7 @@
+
 import { GoogleGenAI } from "@google/genai";
 import { fileToBase64 } from "../utils";
 import { Photo } from "../types";
-import { config } from "../src/config";
 
 const GEMINI_MODEL = "gemini-3-pro-preview";
 
@@ -147,17 +147,15 @@ export const generateItemComment = async (
   roomName: string,
   photos: Photo[]
 ): Promise<string> => {
-  const apiKey = config.GEMINI_API_KEY;
-
-  if (!apiKey) {
-    throw new Error("VITE_API_KEY is missing. Please set it in your environment configuration.");
+  if (!process.env.API_KEY) {
+    throw new Error("API Key is missing. Please check your environment configuration.");
   }
   
   if (photos.length === 0) {
     throw new Error("No photos available to analyze.");
   }
 
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const parts = await prepareImageParts(photos);
 
   const specificGuidance = getSpecificGuidance(itemName);
@@ -202,17 +200,15 @@ export const generateOverallComment = async (
   roomName: string,
   photos: Photo[]
 ): Promise<string> => {
-  const apiKey = config.GEMINI_API_KEY;
-
-  if (!apiKey) {
-    throw new Error("VITE_API_KEY is missing. Please set it in your environment configuration.");
+  if (!process.env.API_KEY) {
+    throw new Error("API Key is missing. Please check your environment configuration.");
   }
   
   if (photos.length === 0) {
     throw new Error("No photos available to analyze.");
   }
 
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const parts = await prepareImageParts(photos);
 
   const prompt = `
@@ -245,4 +241,58 @@ export const generateOverallComment = async (
     console.error("Gemini API Error:", error);
     throw new Error("Failed to generate overview. Please try again.");
   }
+};
+
+// NEW: Inspector Mode for Remote Tenant Inspections
+export const analyzeTenantPhotos = async (
+    itemName: string,
+    tenantComment: string,
+    photos: Photo[]
+): Promise<{ text: string; isFlagged: boolean }> => {
+    if (!process.env.API_KEY) {
+        throw new Error("API Key is missing.");
+    }
+
+    if (photos.length === 0) {
+        return { text: "No photos provided by tenant to verify.", isFlagged: true };
+    }
+
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const parts = await prepareImageParts(photos);
+
+    const prompt = `
+        You are a strict Property Inspector auditing a remote inspection submitted by a tenant.
+        
+        ITEM: ${itemName}
+        TENANT'S COMMENT: "${tenantComment || 'No comment provided'}"
+        
+        INSTRUCTIONS:
+        1. Analyze the photo(s) specifically for defects, damage, or cleanliness issues.
+        2. Compare the visual evidence against the tenant's comment.
+           - If the tenant says "Clean/Undamaged" but you see stains, cracks, or damage -> FLAG IT.
+           - If the tenant admits damage, verify if it matches the photo.
+        3. Output a short, blunt assessment for the Property Manager.
+        4. START with "FLAGGED:" if there is a discrepancy or issue. Otherwise start with "VERIFIED:".
+        
+        Example Outputs:
+        "FLAGGED: Tenant claims clean, but significant grease buildup visible on rangehood filters."
+        "VERIFIED: Item appears consistent with tenant's description. No visible defects."
+    `;
+
+    parts.push({ text: prompt });
+
+    try {
+        const response = await ai.models.generateContent({
+            model: GEMINI_MODEL,
+            contents: { parts },
+        });
+
+        const text = response.text?.trim() || "Analysis failed.";
+        const isFlagged = text.toUpperCase().startsWith("FLAGGED");
+
+        return { text, isFlagged };
+    } catch (error) {
+        console.error("Gemini Inspector Error:", error);
+        return { text: "AI Analysis unavailable.", isFlagged: false };
+    }
 };

@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 
 export const healthRoutes: FastifyPluginAsync = async (app) => {
   // Liveness probe - basic health check
-  app.get('/', async (request, reply) => {
+  app.get('/health', async (request, reply) => {
     return {
       status: 'healthy',
       service: 'gateway',

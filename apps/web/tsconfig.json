@@ -1,4 +1,6 @@
+
 {
+  "extends": "../../tsconfig.json",
   "compilerOptions": {
     "target": "ES2022",
     "experimentalDecorators": true,
@@ -11,7 +13,8 @@
     ],
     "skipLibCheck": true,
     "types": [
-      "node"
+      "node",
+      "vite/client"
     ],
     "moduleResolution": "bundler",
     "isolatedModules": true,
@@ -24,6 +27,7 @@
       ]
     },
     "allowImportingTsExtensions": true,
-    "noEmit": true
-  }
+    "emitDeclarationOnly": true
+  },
+  "include": ["src", "vite.config.ts", "types.ts", "utils.ts"]
 }

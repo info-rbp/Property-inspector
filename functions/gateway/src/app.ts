@@ -98,7 +98,7 @@ export async function buildApp(options: FastifyServerOptions = {}) {
   app.addHook('onRequest', authMiddleware);
 
   // Register routes
-  await app.register(healthRoutes, { prefix: '/health' });
+  await app.register(healthRoutes, { prefix: '/api/v1' });
   await app.register(inspectionRoutes, { prefix: '/api/v1/inspections' });
   await app.register(mediaRoutes, { prefix: '/api/v1/media' });
   await app.register(analysisRoutes, { prefix: '/api/v1/analysis' });
