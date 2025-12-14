@@ -1,7 +1,7 @@
-let
-  # Nix packages for IDX/Firebase Studio dev shell
-  pkgs = import <nixpkgs> {};
-in
+{
+  # Development shell configuration for IDX/Firebase Studio
+  pkgs ? import <nixpkgs> {}
+}:
 pkgs.mkShell {
   packages = with pkgs; [
     nodejs_20
