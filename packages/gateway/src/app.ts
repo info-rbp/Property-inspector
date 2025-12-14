@@ -23,7 +23,7 @@ export async function buildApp(options: FastifyServerOptions = {}) {
 
   // Register core plugins
   await app.register(cors, {
-    origin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:5173'],
+    origin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3000'],
     credentials: true
   });
 

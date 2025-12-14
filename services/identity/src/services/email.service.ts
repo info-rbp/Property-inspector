@@ -3,7 +3,7 @@ import { notificationsClient } from '../clients/notificationsClient';
 export const sendActivationEmail = async (email: string, token: string, tenantId: string = 'system') => {
   // Construct the link (In production, this base URL comes from env)
   // Assuming a separate UI domain
-  const dashboardUrl = process.env.DASHBOARD_URL || 'http://localhost:5173';
+  const dashboardUrl = process.env.DASHBOARD_URL || 'http://localhost:3000';
   const activationLink = `${dashboardUrl}/activate?token=${token}`;
 
   await notificationsClient.send({
