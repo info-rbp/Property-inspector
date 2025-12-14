@@ -146,15 +146,17 @@ export const generateItemComment = async (
   roomName: string,
   photos: Photo[]
 ): Promise<string> => {
-  if (!process.env.API_KEY) {
-    throw new Error("API Key is missing. Please check your environment configuration.");
+  const apiKey = import.meta.env.VITE_API_KEY;
+
+  if (!apiKey) {
+    throw new Error("VITE_API_KEY is missing. Please set it in your environment configuration.");
   }
   
   if (photos.length === 0) {
     throw new Error("No photos available to analyze.");
   }
 
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey });
   const parts = await prepareImageParts(photos);
 
   const specificGuidance = getSpecificGuidance(itemName);
@@ -199,15 +201,17 @@ export const generateOverallComment = async (
   roomName: string,
   photos: Photo[]
 ): Promise<string> => {
-  if (!process.env.API_KEY) {
-    throw new Error("API Key is missing. Please check your environment configuration.");
+  const apiKey = import.meta.env.VITE_API_KEY;
+
+  if (!apiKey) {
+    throw new Error("VITE_API_KEY is missing. Please set it in your environment configuration.");
   }
   
   if (photos.length === 0) {
     throw new Error("No photos available to analyze.");
   }
 
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey });
   const parts = await prepareImageParts(photos);
 
   const prompt = `
