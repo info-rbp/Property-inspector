@@ -1,0 +1,44 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id    String @id @default(cuid())
+  email String @unique
+  name  String?
+}
+
+model Property {
+  id        String   @id @default(cuid())
+  address   String
+  ownerName String
+  tenantName String?
+  tenantEmail String?
+  defaultRooms String[]
+  remoteInspections RemoteInspectionRequest[]
+}
+
+model Inspection {
+  id          String   @id @default(cuid())
+  propertyId  String
+  date        DateTime
+  inspectorName String
+  status      String
+  summary     String
+}
+
+model RemoteInspectionRequest {
+  id          String   @id @default(cuid())
+  property    Property @relation(fields: [propertyId], references: [id])
+  propertyId  String
+  status      String
+  tenantName  String
+  tenantEmail String
+  inspectionDate DateTime
+  rooms       String[]
+}

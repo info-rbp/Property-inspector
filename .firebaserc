@@ -1,5 +1,1 @@
-{
-  "projects": {
-    "default": "REPLACE_WITH_GCP_PROJECT_ID"
-  }
-}
+{ "projects": { "default": "property-inspector-30024-1af23" } }
