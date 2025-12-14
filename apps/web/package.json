@@ -13,6 +13,7 @@
     "@emotion/styled": "^11.11.5",
     "@mui/material": "^5.15.18",
     "@mui/x-data-grid": "^7.5.0",
+    "lucide-react": "^0.561.0",
     "react": "^19.0.0-rc-f994737d14-20240522",
     "react-dom": "^19.0.0-rc-f994737d14-20240522",
     "react-router-dom": "^6.23.1",

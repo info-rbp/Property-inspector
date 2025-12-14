@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, FileText, ChevronRight, Menu, X, ArrowRight, ClipboardCheck, LogOut, Users, Settings as SettingsIcon, FileOutput, Lightbulb, Building } from 'lucide-react';
+import { LayoutDashboard, FileText, ChevronRight, Menu, X, ArrowRight, ClipboardCheck, LogOut, Users, Settings as SettingsIcon, FileOutput, Lightbulb, Building, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import ConditionReport from './components/ConditionReport';
 import ClientManager from './components/ClientManager';
 import ProposalGenerator from './components/ProposalGenerator';
@@ -12,7 +12,7 @@ type ActiveTool = 'dashboard' | 'condition-report' | 'routine-inspection' | 'exi
 
 const App: React.FC = () => {
   const [activeTool, setActiveTool] = useState<ActiveTool>('dashboard');
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
 
   const getActiveComponent = () => {
     switch (activeTool) {
@@ -41,80 +41,56 @@ const App: React.FC = () => {
         return null;
     }
   };
-
-  const NavButton = ({ tool, icon: Icon, label }: { tool: ActiveTool; icon: any; label: string }) => (
+  
+  const NavButton = ({ tool, icon: Icon, label, isExpanded }: { tool: ActiveTool; icon: any; label: string, isExpanded: boolean }) => (
     <button 
-      onClick={() => { setActiveTool(tool); setIsMobileMenuOpen(false); }}
-      className={`text-sm font-medium transition-colors duration-200 flex items-center gap-2 px-3 py-2 rounded-lg ${
+      onClick={() => setActiveTool(tool)}
+      className={`w-full text-sm font-medium transition-colors duration-200 flex items-center gap-3 px-3 py-2 rounded-lg ${
         activeTool === tool ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
       }`}
     >
       <Icon size={18} />
-      {label}
+      {isExpanded && <span className='truncate'>{label}</span>}
     </button>
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-900">
+    <div className="min-h-screen bg-gray-50 flex font-sans text-gray-900">
       
-      {/* Top Navigation Bar */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            
-            {/* Logo */}
+      {/* Sidebar */}
+      <aside className={`bg-white border-r border-gray-200 flex flex-col transition-all duration-300 ${isSidebarExpanded ? 'w-64' : 'w-20'}`}>
+        <div className="flex items-center justify-between h-16 p-4 border-b border-gray-200">
+          {isSidebarExpanded && (
             <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveTool('dashboard')}>
               <div className="w-9 h-9 bg-blue-800 rounded-lg text-white flex items-center justify-center font-bold text-lg shadow-sm">
                 RB
               </div>
-              <span className="font-bold text-xl text-gray-900 tracking-tight">Remote Business Partner</span>
+              <span className="font-bold text-xl text-gray-900 tracking-tight">RBP</span>
             </div>
-
-            {/* Desktop Navigation */}
-            <nav className="hidden xl:flex items-center gap-2">
-              <NavButton tool="dashboard" icon={LayoutDashboard} label="Dashboard" />
-              <div className="h-6 w-px bg-gray-200 mx-2"></div>
-              <NavButton tool="condition-report" icon={FileText} label="Entry Report" />
-              <NavButton tool="routine-inspection" icon={ClipboardCheck} label="Routine" />
-              <NavButton tool="exit-inspection" icon={LogOut} label="Exit" />
-              <NavButton tool="remote-inspection" icon={Users} label="Remote" />
-              <div className="h-6 w-px bg-gray-200 mx-2"></div>
-              <NavButton tool="clients" icon={Building} label="Properties" />
-              <NavButton tool="proposals" icon={FileOutput} label="Proposals" />
-              <div className="h-6 w-px bg-gray-200 mx-2"></div>
-              <NavButton tool="feature-request" icon={Lightbulb} label="Features" />
-              <NavButton tool="settings" icon={SettingsIcon} label="Settings" />
-            </nav>
-
-            {/* Mobile Menu Toggle */}
-            <div className="flex items-center gap-4 xl:hidden">
-              <button 
-                className="p-2 text-gray-600 rounded-lg hover:bg-gray-100"
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              >
-                {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-              </button>
-            </div>
-          </div>
+          )}
+          <button 
+            onClick={() => setIsSidebarExpanded(!isSidebarExpanded)}
+            className="p-2 text-gray-600 rounded-lg hover:bg-gray-100"
+          >
+            {isSidebarExpanded ? <ChevronsLeft size={20} /> : <ChevronsRight size={20} />}
+          </button>
         </div>
 
-        {/* Mobile Menu */}
-        {isMobileMenuOpen && (
-          <div className="xl:hidden bg-white border-t border-gray-200 px-4 pt-2 pb-4 shadow-lg absolute w-full z-50">
-             <div className="flex flex-col gap-2">
-               <NavButton tool="dashboard" icon={LayoutDashboard} label="Dashboard" />
-               <NavButton tool="condition-report" icon={FileText} label="Entry Report" />
-               <NavButton tool="routine-inspection" icon={ClipboardCheck} label="Routine Inspection" />
-               <NavButton tool="exit-inspection" icon={LogOut} label="Exit Inspection" />
-               <NavButton tool="remote-inspection" icon={Users} label="Remote Inspection" />
-               <NavButton tool="clients" icon={Building} label="Properties" />
-               <NavButton tool="proposals" icon={FileOutput} label="Proposals" />
-               <NavButton tool="feature-request" icon={Lightbulb} label="Feature Request" />
-               <NavButton tool="settings" icon={SettingsIcon} label="Settings" />
-             </div>
-          </div>
-        )}
-      </header>
+        <nav className="flex-1 p-4 space-y-2">
+            <NavButton tool="dashboard" icon={LayoutDashboard} label="Dashboard" isExpanded={isSidebarExpanded} />
+            <div className="h-px bg-gray-200 my-2"></div>
+            <NavButton tool="condition-report" icon={FileText} label="Entry Report" isExpanded={isSidebarExpanded} />
+            <NavButton tool="routine-inspection" icon={ClipboardCheck} label="Routine" isExpanded={isSidebarExpanded} />
+            <NavButton tool="exit-inspection" icon={LogOut} label="Exit" isExpanded={isSidebarExpanded} />
+            <NavButton tool="remote-inspection" icon={Users} label="Remote" isExpanded={isSidebarExpanded} />
+            <div className="h-px bg-gray-200 my-2"></div>
+            <NavButton tool="clients" icon={Building} label="Properties" isExpanded={isSidebarExpanded} />
+            <NavButton tool="proposals" icon={FileOutput} label="Proposals" isExpanded={isSidebarExpanded} />
+            <div className="h-px bg-gray-200 my-2"></div>
+            <NavButton tool="feature-request" icon={Lightbulb} label="Features" isExpanded={isSidebarExpanded} />
+            <NavButton tool="settings" icon={SettingsIcon} label="Settings" isExpanded={isSidebarExpanded} />
+        </nav>
+      </aside>
 
       {/* Main Content Area */}
       <main className="flex-1">
@@ -261,7 +237,7 @@ const App: React.FC = () => {
              </div>
           </div>
         ) : (
-          getActiveComponent()
+          <div className="w-full h-full p-4"><div className="bg-white w-full h-full rounded-lg shadow-sm">{getActiveComponent()}</div></div>
         )}
       </main>
 
