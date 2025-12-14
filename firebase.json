@@ -1,0 +1,28 @@
+{
+  "hosting": [
+    {
+      "target": "web",
+      "public": "packages/web/dist",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "rewrites": [
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ],
+      "predeploy": [
+        "npm install && npm run build --workspace packages/web"
+      ]
+    }
+  ],
+  "emulators": {
+    "hosting": {
+      "port": 5000,
+      "host": "127.0.0.1"
+    }
+  }
+}
