@@ -1,4 +1,5 @@
 import { FastifyError, FastifyRequest, FastifyReply } from 'fastify';
+import { config } from '../config';
 
 export class AppError extends Error {
   constructor(
@@ -107,7 +108,7 @@ export function errorHandler(
 
   // Default error response
   const statusCode = (error as any).statusCode || 500;
-  const isDevelopment = process.env.NODE_ENV === 'development';
+  const isDevelopment = config.NODE_ENV === 'development';
 
   return reply.code(statusCode).send({
     error: {

@@ -6,6 +6,7 @@ import jwt from '@fastify/jwt';
 import multipart from '@fastify/multipart';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
+import { config } from './config';
 
 // Import route handlers
 import { healthRoutes } from './routes/health';
@@ -23,7 +24,7 @@ export async function buildApp(options: FastifyServerOptions = {}) {
 
   // Register core plugins
   await app.register(cors, {
-    origin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3000'],
+    origin: config.corsOrigins,
     credentials: true
   });
 
@@ -32,16 +33,16 @@ export async function buildApp(options: FastifyServerOptions = {}) {
   });
 
   await app.register(rateLimit, {
-    max: parseInt(process.env.RATE_LIMIT_MAX || '100', 10),
-    timeWindow: process.env.RATE_LIMIT_WINDOW || '1 minute'
+    max: config.RATE_LIMIT_MAX,
+    timeWindow: config.RATE_LIMIT_WINDOW
   });
 
   await app.register(jwt, {
-    secret: process.env.JWT_SECRET || 'change-me-in-production',
+    secret: config.JWT_SECRET,
     sign: {
-      expiresIn: process.env.JWT_EXPIRES_IN || '7d',
-      issuer: process.env.JWT_ISSUER || 'proinspect-gateway',
-      audience: process.env.JWT_AUDIENCE || 'proinspect-platform'
+      expiresIn: config.JWT_EXPIRES_IN,
+      issuer: config.JWT_ISSUER,
+      audience: config.JWT_AUDIENCE
     }
   });
 
@@ -61,7 +62,7 @@ export async function buildApp(options: FastifyServerOptions = {}) {
       },
       servers: [
         {
-          url: process.env.API_BASE_URL || 'http://localhost:3001',
+          url: config.API_BASE_URL,
           description: 'Gateway API Server'
         }
       ],

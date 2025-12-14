@@ -15,7 +15,7 @@
         }
       ],
       "predeploy": [
-        "npm install && npm run build --workspace packages/web"
+        "npm install --prefix packages/web && npm run build --prefix packages/web"
       ]
     }
   ],

@@ -1,4 +1,5 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
+import { config } from '../config';
 
 export interface AuthUser {
   userId: string;
@@ -46,7 +47,7 @@ export async function authMiddleware(
   // Check for service-to-service authentication
   const serviceSecret = request.headers['x-service-secret'] as string;
   if (serviceSecret && SERVICE_ROUTES.some(route => path.startsWith(route))) {
-    if (serviceSecret === process.env.SERVICE_SECRET) {
+    if (serviceSecret === config.SERVICE_AUTH_SECRET) {
       request.isServiceAuth = true;
       return;
     }

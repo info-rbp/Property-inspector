@@ -2,6 +2,7 @@ import { FastifyPluginAsync } from 'fastify';
 import { PrismaClient } from '@prisma/client';
 import { AppError } from '../middleware/error';
 import crypto from 'crypto';
+import { config } from '../config';
 
 const prisma = new PrismaClient();
 
@@ -31,7 +32,7 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
 
     // In production, this would call the Media Storage Service
     // to get a signed upload URL from S3/GCS
-    const uploadUrl = `${process.env.MEDIA_SERVICE_URL}/upload/${mediaId}`;
+    const uploadUrl = `${config.MEDIA_SERVICE_URL}/upload/${mediaId}`;
 
     // Create media reference in database
     const mediaRef = await prisma.mediaReference.create({
@@ -83,8 +84,8 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
       where: { id: mediaRef.id },
       data: {
         uploadedAt: new Date(),
-        viewUrl: `${process.env.MEDIA_SERVICE_URL}/view/${mediaId}`,
-        thumbnailUrl: `${process.env.MEDIA_SERVICE_URL}/thumb/${mediaId}`
+        viewUrl: `${config.MEDIA_SERVICE_URL}/view/${mediaId}`,
+        thumbnailUrl: `${config.MEDIA_SERVICE_URL}/thumb/${mediaId}`
       }
     });
 

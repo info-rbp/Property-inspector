@@ -1,9 +1,6 @@
-import { config } from 'dotenv';
 import { buildApp } from './app';
 import { PrismaClient } from '@prisma/client';
-
-// Load environment variables
-config();
+import { config } from './config';
 
 const prisma = new PrismaClient();
 
@@ -14,10 +11,10 @@ const start = async () => {
     console.log('✅ Database connected successfully');
 
     // Build Fastify app
-    const app = await buildApp({ 
+    const app = await buildApp({
       logger: {
-        level: process.env.LOG_LEVEL || 'info',
-        ...(process.env.LOG_PRETTY === 'true' && {
+        level: config.LOG_LEVEL,
+        ...(config.LOG_PRETTY && {
           transport: {
             target: 'pino-pretty',
             options: {
@@ -46,15 +43,15 @@ const start = async () => {
     });
 
     // Start server
-    const port = parseInt(process.env.PORT || '3001', 10);
-    const host = process.env.HOST || '0.0.0.0';
+    const port = config.PORT;
+    const host = config.HOST;
 
     await app.listen({ port, host });
 
     console.log(`
 🚀 Gateway Service Started
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📍 Environment: ${process.env.NODE_ENV || 'development'}
+📍 Environment: ${config.NODE_ENV || 'development'}
 🌐 Server:      http://${host}:${port}
 📚 API Docs:    http://${host}:${port}/docs
 🏥 Health:      http://${host}:${port}/health

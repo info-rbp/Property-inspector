@@ -1,6 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import { PrismaClient } from '@prisma/client';
 import { AppError } from '../middleware/error';
+import { config } from '../config';
 
 const prisma = new PrismaClient();
 
@@ -112,7 +113,7 @@ export const analysisRoutes: FastifyPluginAsync = async (app) => {
   app.post('/webhook/complete', async (request, reply) => {
     // Verify service secret
     const serviceSecret = request.headers['x-service-secret'];
-    if (serviceSecret !== process.env.SERVICE_SECRET) {
+    if (serviceSecret !== config.SERVICE_AUTH_SECRET) {
       throw new AppError(401, 'Invalid service credentials');
     }
 
