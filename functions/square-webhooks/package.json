@@ -1,0 +1,11 @@
+{
+  "name": "square-webhooks",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "ISC",
+  "dependencies": {
+    "firebase-admin": "^12.1.0",
+    "firebase-functions": "^7.0.1",
+    "square": "^35.0.0"
+  }
+}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ReportData, Room } from '../types';
+import { ReportData, Room } from '@/types';
 
 interface PDFPreviewProps {
   data: ReportData;
@@ -17,7 +17,7 @@ const PDFPreview: React.FC<PDFPreviewProps> = ({ data }) => {
   };
 
   const getReportTitle = () => {
-    switch (data.type) {
+    switch (data.reportType) {
       case 'Exit':
         return 'Residential Tenancy Exit Condition Report';
       case 'Routine':
@@ -30,7 +30,7 @@ const PDFPreview: React.FC<PDFPreviewProps> = ({ data }) => {
 
   return (
     <div className="bg-white text-black text-sm leading-tight max-w-[210mm] mx-auto shadow-none print:w-full print:max-w-none">
-      
+
       {/* Page 1: Cover */}
       <div className="p-10 mb-8 border-b-2 border-gray-200 print:border-none page-break">
         <div className="flex justify-between items-start mb-20">
@@ -42,7 +42,7 @@ const PDFPreview: React.FC<PDFPreviewProps> = ({ data }) => {
              <h1 className="text-3xl font-bold text-blue-800 tracking-tighter uppercase">Remote Business Partner</h1>
           </div>
           <div className="text-right text-xs">
-            <p className="font-bold">{data.agentCompany || 'Remote Business Partner'}</p>
+            <p className="font-bold">Remote Business Partner</p>
             <p>19 Bonnard Crescent</p>
             <p>Ashby WA 6065</p>
           </div>
@@ -50,14 +50,14 @@ const PDFPreview: React.FC<PDFPreviewProps> = ({ data }) => {
 
         <div className="text-center mt-32 mb-32">
           <h1 className="text-4xl font-bold mb-8">{getReportTitle()}</h1>
-          <h2 className="text-2xl font-semibold mb-12">{data.propertyAddress || 'Address Not Provided'}</h2>
+          <h2 className="text-2xl font-semibold mb-12">{data.property.address || 'Address Not Provided'}</h2>
         </div>
 
         <div className="text-center mt-20">
           <p className="text-lg mb-2">Report completed on {formatDate(data.inspectionDate)}</p>
-          <p className="text-lg">Prepared by {data.agentName || 'Admin Team'}</p>
+          <p className="text-lg">Prepared by {data.inspector || 'Admin Team'}</p>
         </div>
-        
+
         <div className="text-center mt-32 text-xs text-gray-500">
            <p>Powered by Remote Business Partner AI</p>
         </div>
@@ -65,7 +65,7 @@ const PDFPreview: React.FC<PDFPreviewProps> = ({ data }) => {
 
       {/* Page 2: Disclosures and Details */}
       <div className="p-10 mb-8 page-break">
-         
+
          <div className="border-b-2 border-gray-900 pb-4 mb-10">
             <h1 className="text-3xl font-bold text-gray-900">Report Details & Disclosures</h1>
          </div>
@@ -74,7 +74,7 @@ const PDFPreview: React.FC<PDFPreviewProps> = ({ data }) => {
          <div className="bg-blue-50 border-l-4 border-blue-600 p-4 mb-6 text-xs text-blue-900 text-justify leading-relaxed print:print-color-adjust">
              <h3 className="font-bold mb-2 text-sm">Representation Disclaimer</h3>
              <p>
-                This report has been conducted and prepared by Tiberius Holdings Corporation Pty Ltd as trading as Remote Business Partner on behalf of <span className="font-bold">{data.clientName || '[Client Name]'}</span>. We receive a fee to carry out property reports, including the one that has been produced in this document, from the landlord or managing real estate agent and conduct inspections and subsequent reports based on their requirements and those under the Residential Tenancies Act 1987 (WA). The commentary provided within this report is based on the observations made of the property on the date of the inspection and may reference reports conducted and prepared by other parties in relation to the property. If you have been provided this report by your landlord or the real estate agency, you must address all questions or disputes with these parties and not directly with us.
+                This report has been conducted and prepared by Tiberius Holdings Corporation Pty Ltd as trading as Remote Business Partner on behalf of <span className="font-bold">{data.property.ownerName || '[Client Name]'}</span>. We receive a fee to carry out property reports, including the one that has been produced in this document, from the landlord or managing real estate agent and conduct inspections and subsequent reports based on their requirements and those under the Residential Tenancies Act 1987 (WA). The commentary provided within this report is based on the observations made of the property on the date of the inspection and may reference reports conducted and prepared by other parties in relation to the property. If you have been provided this report by your landlord or the real estate agency, you must address all questions or disputes with these parties and not directly with us.
              </p>
          </div>
 
@@ -91,11 +91,11 @@ const PDFPreview: React.FC<PDFPreviewProps> = ({ data }) => {
             <div className="p-4 space-y-4">
                 <div className="grid grid-cols-12 gap-2">
                     <div className="col-span-3 font-bold">Property Address:</div>
-                    <div className="col-span-9 border-b border-gray-300">{data.propertyAddress}</div>
+                    <div className="col-span-9 border-b border-gray-300">{data.property.address}</div>
                 </div>
                 <div className="grid grid-cols-12 gap-2">
                     <div className="col-span-3 font-bold">Inspecting Agent:</div>
-                    <div className="col-span-9 border-b border-gray-300">{data.agentName}</div>
+                    <div className="col-span-9 border-b border-gray-300">{data.inspector}</div>
                 </div>
                  <div className="grid grid-cols-12 gap-2">
                     <div className="col-span-3 font-bold">Inspection Date:</div>
@@ -103,11 +103,11 @@ const PDFPreview: React.FC<PDFPreviewProps> = ({ data }) => {
                 </div>
                 <div className="grid grid-cols-12 gap-2">
                     <div className="col-span-3 font-bold">Tenant/s:</div>
-                    <div className="col-span-9 border-b border-gray-300">{data.tenantName}</div>
+                    <div className="col-span-9 border-b border-gray-300">{data.property.tenantName}</div>
                 </div>
             </div>
          </div>
-         
+
          <div className="border border-black p-4 flex justify-between items-center text-sm">
              <div>Tenant's Initial(s):</div>
              <div className="w-16 border-b border-black"></div>
@@ -120,7 +120,7 @@ const PDFPreview: React.FC<PDFPreviewProps> = ({ data }) => {
       {/* Pages 3+: Rooms */}
       <div className="p-10">
         <div className="mb-4 text-xs bg-gray-100 p-2 border border-black">
-            <strong>Key:</strong> 
+            <strong>Key:</strong>
             <span className="mx-2"><span className="font-bold">Cln</span> = Clean</span>
             <span className="mx-2"><span className="font-bold">Udg</span> = Undamaged</span>
             <span className="mx-2"><span className="font-bold">Wkg</span> = Working</span>
@@ -151,7 +151,7 @@ const PDFPreview: React.FC<PDFPreviewProps> = ({ data }) => {
                     <td className="border border-black bg-gray-50"></td>
                     <td className="border border-black bg-gray-50"></td>
                     <td className="border border-black p-2 font-medium bg-gray-50">
-                        {room.photos.length > 0 && <span className="text-blue-700 block mb-1">({room.photos.length} photos attached)</span>}
+                        {/* {room.photos.length > 0 && <span className="text-blue-700 block mb-1">({room.photos.length} photos attached)</span>} */}
                         {room.overallComment || <span className="text-gray-400 italic">No overall comment provided.</span>}
                     </td>
                 </tr>
@@ -166,16 +166,16 @@ const PDFPreview: React.FC<PDFPreviewProps> = ({ data }) => {
                 ))}
               </tbody>
             </table>
-            
+
             {/* Photos for this room - Grid Layout */}
-            {room.photos.length > 0 && (
+            {/* {room.photos.length > 0 && (
                 <div className="mt-4 border border-black p-2 bg-gray-50 avoid-break">
                     <div className="text-xs font-bold mb-2 uppercase border-b border-gray-300 pb-1">Photos - {room.name}</div>
                     <div className="grid grid-cols-4 gap-2">
                          {room.photos.map((photo, pIndex) => (
                             <div key={photo.id} className="avoid-break">
                                 <div className="aspect-[4/3] w-full overflow-hidden border border-gray-300 bg-white relative">
-                                    <img src={photo.previewUrl} className="w-full h-full object-cover" alt="Inspection" />
+                                    <img src={photo.url} className="w-full h-full object-cover" alt="Inspection" />
                                     <div className="absolute bottom-0 right-0 text-[8px] bg-white/80 px-1 border-tl border-gray-200">
                                         #{pIndex + 1}
                                     </div>
@@ -184,7 +184,7 @@ const PDFPreview: React.FC<PDFPreviewProps> = ({ data }) => {
                         ))}
                     </div>
                 </div>
-            )}
+            )} */}
           </div>
         ))}
       </div>

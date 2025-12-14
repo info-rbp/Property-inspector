@@ -1,7 +1,21 @@
+
+// A simplified, unified set of types for the application.
+
+export enum RemoteInspectionStatus {
+  PENDING = 'pending',
+  IN_PROGRESS = 'in_progress',
+  SUBMITTED = 'submitted',
+  REVIEWED = 'reviewed',
+  CANCELLED = 'cancelled',
+  SENT = 'sent'
+}
+
+export type ReportType = 'Entry' | 'Exit' | 'Routine';
+
 export interface Photo {
   id: string;
-  file: File;
-  previewUrl: string;
+  url: string;
+  caption?: string;
 }
 
 export interface InspectionItem {
@@ -11,60 +25,49 @@ export interface InspectionItem {
   isUndamaged: boolean;
   isWorking: boolean;
   comment: string;
+  photos: Photo[];
+  category: string;
+  rating: any;
+  notes: string;
 }
 
 export interface Room {
-  id: string;
+  id:string;
   name: string;
   items: InspectionItem[];
   photos: Photo[];
   overallComment: string;
 }
 
-export type ReportType = 'Entry' | 'Exit' | 'Routine';
-
-export interface ReportData {
-  id: string;
-  type: ReportType;
-  propertyAddress: string;
-  agentName: string;
-  agentCompany: string;
-  clientName: string;
-  inspectionDate: string;
-  tenantName: string;
-  rooms: Room[];
-}
-
-export enum ReportViewMode {
-  EDIT = 'EDIT',
-  PREVIEW = 'PREVIEW'
-}
-
-export enum RemoteInspectionStatus {
-  SENT = 'SENT',
-  IN_PROGRESS = 'IN_PROGRESS',
-  SUBMITTED = 'SUBMITTED',
-  REVIEWED = 'REVIEWED',
-}
-
 export interface Property {
   id: string;
   address: string;
   ownerName: string;
-  tenantName?: string;
-  tenantEmail?: string;
-  defaultRooms?: string[];
+  tenantName: string;
+  tenantEmail: string;
+  defaultRooms: string[];
+  thumbnailUrl?: string;
 }
 
 export interface RemoteInspectionRequest {
   id: string;
-  token: string;
   propertyId: string;
-  propertyAddress: string;
+  status: RemoteInspectionStatus;
   tenantName: string;
   tenantEmail: string;
-  status: RemoteInspectionStatus;
+  inspectionDate: Date;
+  rooms: Room[];
+  propertyAddress: string;
   reportType: ReportType;
   dueDate: string;
-  data: ReportData;
+}
+
+export interface Inspection {
+  id: string;
+  propertyId: string;
+  date: string;
+  inspectorName: string;
+  status: 'draft' | 'completed' | 'final';
+  rooms: Room[];
+  summary: string;
 }

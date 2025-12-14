@@ -1,5 +1,5 @@
 import React from 'react';
-import { Save, Building, Image as ImageIcon, Key } from 'lucide-react';
+import { Save, Building, Image as ImageIcon, Key, CreditCard } from 'lucide-react';
 
 const Settings: React.FC = () => {
   return (
@@ -54,6 +54,23 @@ const Settings: React.FC = () => {
                     <button className="px-4 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-sm font-medium hover:bg-blue-100 transition">Upload New</button>
                  </div>
               </div>
+           </div>
+        </div>
+
+        {/* Billing */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+           <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex items-center gap-2">
+              <CreditCard size={20} className="text-gray-500" />
+              <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Billing & Subscription</h2>
+           </div>
+           <div className="p-6">
+              <p className="text-sm text-gray-600 mb-4">Manage your subscription plan, view usage details, and update your payment method.</p>
+              <button 
+                className="px-4 py-2 bg-blue-600 text-white border border-blue-600 rounded-lg text-sm font-medium hover:bg-blue-700 transition"
+                onClick={() => { /* Navigate to Billing page */ }}
+              >
+                Manage Billing
+              </button>
            </div>
         </div>
 

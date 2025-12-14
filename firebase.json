@@ -19,6 +19,35 @@
       ]
     }
   ],
+  "functions": [
+    {
+      "source": "functions/gateway",
+      "codebase": "gateway",
+      "runtime": "nodejs20",
+      "predeploy": [
+        "npm install --prefix functions/gateway && npm run build --prefix functions/gateway"
+      ],
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.log"
+      ]
+    },
+    {
+      "source": "functions/square-webhooks",
+      "codebase": "square-webhooks",
+      "runtime": "nodejs20",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.log"
+      ]
+    }
+  ],
   "emulators": {
     "hosting": {
       "port": 5000,
