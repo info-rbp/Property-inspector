@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Multi-tenant white-label property inspection platform",
   "private": true,
+  "packageManager": "pnpm@8.15.8",
   "workspaces": [
     "packages/web",
     "packages/gateway",
