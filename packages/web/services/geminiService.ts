@@ -1,6 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { fileToBase64 } from "../utils";
 import { Photo } from "../types";
+import { config } from "../src/config";
 
 const GEMINI_MODEL = "gemini-3-pro-preview";
 
@@ -146,7 +147,7 @@ export const generateItemComment = async (
   roomName: string,
   photos: Photo[]
 ): Promise<string> => {
-  const apiKey = import.meta.env.VITE_API_KEY;
+  const apiKey = config.GEMINI_API_KEY;
 
   if (!apiKey) {
     throw new Error("VITE_API_KEY is missing. Please set it in your environment configuration.");
@@ -201,7 +202,7 @@ export const generateOverallComment = async (
   roomName: string,
   photos: Photo[]
 ): Promise<string> => {
-  const apiKey = import.meta.env.VITE_API_KEY;
+  const apiKey = config.GEMINI_API_KEY;
 
   if (!apiKey) {
     throw new Error("VITE_API_KEY is missing. Please set it in your environment configuration.");
