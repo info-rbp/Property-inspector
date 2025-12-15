@@ -7,7 +7,7 @@ PROJECT_ID=${PROJECT_ID:?"PROJECT_ID must be set"}
 IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/gateway/gateway-api:$(date +%Y%m%d%H%M%S)"
 
 echo "Building container image ${IMAGE}"
-gcloud builds submit --tag "${IMAGE}" --project "${PROJECT_ID}" --file packages/gateway/Dockerfile .
+gcloud builds submit --tag "${IMAGE}" --project "${PROJECT_ID}" --file functions/gateway/Dockerfile .
 
 echo "Deploying to Cloud Run service ${SERVICE_NAME}"
 gcloud run deploy "${SERVICE_NAME}" \

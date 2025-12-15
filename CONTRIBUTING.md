@@ -81,7 +81,7 @@ Run tests before submitting:
 npm test
 
 # Specific service
-npm test --workspace=packages/gateway
+npm test --workspace=gateway
 
 # With coverage
 npm run test:coverage

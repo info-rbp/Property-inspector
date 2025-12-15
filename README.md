@@ -37,8 +37,8 @@ npm install
 
 2. **Setup environment variables:**
 ```bash
-cp packages/gateway/.env.example packages/gateway/.env
 cp packages/web/.env.example packages/web/.env
+cp functions/gateway/.env.example functions/gateway/.env
 # Edit .env files with your configuration
 ```
 
@@ -95,7 +95,7 @@ npm run dev:gateway  # Gateway API on http://localhost:3001
   - Report generation and preview
   - Remote inspection portal
 
-#### 🚪 Gateway Service (`packages/gateway`)
+#### 🚪 Gateway Service (`functions/gateway`)
 - **Technology:** Fastify, Prisma, PostgreSQL
 - **Responsibilities:**
   - Central API gateway
@@ -171,7 +171,7 @@ npm run dev:gateway  # Gateway API on http://localhost:3001
 npm test
 
 # Run specific service tests
-npm test --workspace=packages/gateway
+npm test --workspace=gateway
 npm test --workspace=packages/web
 
 # E2E tests
@@ -190,7 +190,7 @@ docker-compose up
 1. **Build and push images:**
 ```bash
 # Gateway
-gcloud builds submit --tag gcr.io/PROJECT_ID/gateway packages/gateway
+gcloud builds submit --tag gcr.io/PROJECT_ID/gateway --file functions/gateway/Dockerfile .
 
 # Web app
 gcloud builds submit --tag gcr.io/PROJECT_ID/web packages/web
@@ -217,9 +217,10 @@ gcloud run deploy web \
 
 ```
 proinspect-platform/
-├── packages/
-│   ├── web/                 # React web application
+├── functions/
 │   └── gateway/              # Core API gateway
+├── packages/
+│   └── web/                  # React web application
 ├── services/
 │   ├── media-storage/        # Media handling service
 │   ├── background-jobs/      # Job orchestration

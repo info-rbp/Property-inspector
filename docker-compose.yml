@@ -62,8 +62,8 @@ services:
   # Gateway Service
   gateway:
     build:
-      context: ./packages/gateway
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: functions/gateway/Dockerfile
     ports:
       - "3001:3001"
     environment:
@@ -75,8 +75,9 @@ services:
       - postgres
       - redis
     volumes:
-      - ./packages/gateway:/app
+      - ./functions/gateway:/app/functions/gateway
       - /app/node_modules
+    working_dir: /app/functions/gateway
     command: npm run dev
 
   # Media Storage Service
