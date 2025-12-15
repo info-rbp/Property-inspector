@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { Room, InspectionItem, Photo } from '../types';
 import { Trash2, Plus, Sparkles, Loader2, Image as ImageIcon, Check, X, ImageOff, FileWarning, Bot, Wand2 } from 'lucide-react';
 import { generateId, processImageFile } from '../utils';
-import { generateItemComment, generateOverallComment } from '../services/geminiService';
+import { generateItemComment, generateOverallComment } from '../../services/geminiService';
 
 interface RoomFormProps {
   room: Room;

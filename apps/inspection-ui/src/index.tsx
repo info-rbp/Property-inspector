@@ -1152,14 +1152,19 @@ const APP_HTML = `<!DOCTYPE html>
 </body>
 </html>`;
 
-// Initialize Gemini AI with hardcoded API key for development
-const GEMINI_API_KEY = 'AIzaSyB1eta3AGLBi5exnNLV3HbqBVRm1bCl3gs';
+// Initialize Gemini AI with cached client
 let genAI: GoogleGenerativeAI | null = null;
+let cachedApiKey: string | null = null;
 
 // Initialize Gemini when needed
-const getGenAI = (apiKey: string) => {
-  if (!genAI || apiKey !== GEMINI_API_KEY) {
+const getGenAI = (apiKey?: string) => {
+  if (!apiKey) {
+    throw new Error('GEMINI_API_KEY is not configured');
+  }
+
+  if (!genAI || apiKey !== cachedApiKey) {
     genAI = new GoogleGenerativeAI(apiKey);
+    cachedApiKey = apiKey;
   }
   return genAI;
 };
@@ -1259,8 +1264,7 @@ app.post('/api/gemini/analyze', async (c) => {
   try {
     const { image, roomType, existingComment } = await c.req.json();
     
-    // Use hardcoded API key if environment variable not set
-    const apiKey = c.env.GEMINI_API_KEY || GEMINI_API_KEY;
+    const apiKey = c.env.GEMINI_API_KEY;
     const ai = getGenAI(apiKey);
     const model = ai.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
     
@@ -1343,7 +1347,7 @@ Return response in this JSON format:
 // Test Gemini connection
 app.get('/api/gemini/test', async (c) => {
   try {
-    const apiKey = c.env.GEMINI_API_KEY || GEMINI_API_KEY;
+    const apiKey = c.env.GEMINI_API_KEY;
     const ai = getGenAI(apiKey);
     const model = ai.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
     

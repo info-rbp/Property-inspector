@@ -6,6 +6,11 @@ export const config = {
   projectId: process.env.PROJECT_ID || 'local-project',
   firestore: {
     collection: process.env.JOBS_FIRESTORE_COLLECTION || 'jobs',
+    mediaCollection: process.env.MEDIA_COLLECTION || 'media',
+  },
+  pubsub: {
+    topic: process.env.MEDIA_PUBSUB_TOPIC || 'media-processing',
+    subscription: process.env.MEDIA_SUBSCRIPTION || 'media-processing-worker',
   },
   tasks: {
     queue: process.env.CLOUD_TASKS_QUEUE || 'orchestrator-queue',

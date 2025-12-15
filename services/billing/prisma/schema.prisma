@@ -1,0 +1,84 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum PlanCode {
+  STARTER
+  PRO
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  TRIALING
+  CANCELLED
+  EXPIRED
+  PAST_DUE
+}
+
+model Plan {
+  id           String    @id @default(cuid())
+  code         PlanCode  @unique
+  name         String
+  priceCents   Int       @default(0)
+  currency     String    @default("AUD")
+  limits       Json
+  overageRules Json
+  createdAt    DateTime  @default(now())
+
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id                 String              @id @default(cuid())
+  tenantId           String
+  planId             String
+  status             SubscriptionStatus
+  billingPeriodStart DateTime
+  billingPeriodEnd   DateTime
+  trialEndsAt        DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  plan             Plan                @relation(fields: [planId], references: [id])
+  usageEvents      UsageEvent[]
+  usageAggregates  UsageAggregate[]
+
+  @@index([tenantId, status])
+}
+
+model UsageEvent {
+  id              String     @id @default(cuid())
+  tenantId        String
+  subscriptionId  String
+  usageType       String
+  quantity        Int
+  sourceService   String
+  sourceEntityId  String
+  createdAt       DateTime   @default(now())
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id])
+
+  @@index([tenantId, usageType])
+}
+
+model UsageAggregate {
+  id                 String     @id @default(cuid())
+  tenantId           String
+  subscriptionId     String
+  usageType          String
+  totalQuantity      Int        @default(0)
+  billingPeriodStart DateTime
+  billingPeriodEnd   DateTime
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id])
+
+  @@unique([subscriptionId, usageType, billingPeriodStart])
+}
