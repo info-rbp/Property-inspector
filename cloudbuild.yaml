@@ -21,8 +21,8 @@ steps:
       - '-t'
       - '${_REGION}-docker.pkg.dev/${_PROJECT_ID}/${_REPOSITORY}/gateway:latest'
       - '-f'
-      - 'packages/gateway/Dockerfile'
-      - 'packages/gateway'
+      - 'functions/gateway/Dockerfile'
+      - '.'
 
   # Build Web Application
   - name: 'gcr.io/cloud-builders/docker'

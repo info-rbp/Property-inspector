@@ -21,11 +21,11 @@ npm install
 echo ""
 echo "🔧 Setting up environment files..."
 
-if [ ! -f packages/gateway/.env ]; then
-    cp packages/gateway/.env.example packages/gateway/.env
-    echo "✓ Created packages/gateway/.env"
+if [ ! -f functions/gateway/.env ]; then
+    cp functions/gateway/.env.example functions/gateway/.env
+    echo "✓ Created functions/gateway/.env"
 else
-    echo "✓ packages/gateway/.env already exists"
+    echo "✓ functions/gateway/.env already exists"
 fi
 
 if [ ! -f packages/web/.env.local ]; then
@@ -69,7 +69,7 @@ if command -v docker &> /dev/null; then
         
         # Generate Prisma client
         echo "Generating Prisma client..."
-        cd packages/gateway
+        cd functions/gateway
         npx prisma generate
         
         # Run migrations

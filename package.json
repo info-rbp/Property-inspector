@@ -23,7 +23,7 @@
     "test": "npm run test --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "setup": "npm install && npm run setup:db",
-    "setup:db": "npm run prisma:generate --workspace=@proinspect/gateway && npm run prisma:migrate --workspace=@proinspect/gateway",
+    "setup:db": "npm run prisma:generate --workspace=gateway && npm run prisma:migrate --workspace=gateway",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
     "docker:logs": "docker-compose logs -f"
