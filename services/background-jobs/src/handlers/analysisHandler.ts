@@ -24,17 +24,10 @@ export const analysisHandler = async (job: JobDocument, updateProgress: (pct: nu
 
     await updateProgress(30, 'Sending data to AI engine');
 
-    // Simulate external API call latency
-    // const response = await axios.post(`${config.services.analysisUrl}/analyze`, payload);
-    // const result = response.data;
-    
-    // MOCK RESPONSE
-    await new Promise(r => setTimeout(r, 2000)); 
-    const result = {
-        issues: [{ id: 'issue_1', severity: 'HIGH', label: 'Water Damage' }],
-        summary: 'Detected potential water intrusion.',
-        confidence: 0.95
-    };
+    const response = await axios.post(`${config.services.analysisUrl}/analyze`, payload, {
+      timeout: 15000,
+    });
+    const result = response.data;
 
     await updateProgress(90, 'Saving results');
 
@@ -57,7 +50,8 @@ export const analysisHandler = async (job: JobDocument, updateProgress: (pct: nu
     return result;
 
   } catch (error: any) {
-    console.error(`[Analysis] External call failed: ${error.message}`);
+    const details = error.response?.data || error.message;
+    console.error(`[Analysis] External call failed: ${details}`);
     throw error; // Rethrow to trigger retry logic in workerCore
   }
 };
