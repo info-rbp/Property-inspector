@@ -48,7 +48,7 @@ export const initiateUpload = async (req: Request, res: Response) => {
 
   const signedUrl = await generateSignedUploadUrl(storagePath, body.contentType);
 
-  res.json({
+  return res.json({
     mediaId,
     signedUploadUrl: signedUrl,
     expiresAt: new Date(Date.now() + config.UPLOAD_EXPIRY_MINUTES * 60 * 1000).toISOString(),
@@ -61,57 +61,65 @@ export const completeUpload = async (req: Request, res: Response) => {
   const { mediaId } = req.body;
   const { tenantId } = req.user;
 
-  if (!mediaId) return res.status(400).json({ error: 'Missing mediaId' });
-
-  let shouldPublish = false;
-  let mediaPath = '';
+  if (!mediaId) {
+    return res.status(400).json({ error: 'Missing mediaId' });
+  }
 
   try {
-    await db.runTransaction(async (t) => {
+    const result = await db.runTransaction(async (t) => {
       const ref = db.collection(config.FIRESTORE_COLLECTION).doc(mediaId);
       const doc = await t.get(ref);
-      
+
       if (!doc.exists) {
-        throw new Error("Media not found");
+        throw new Error('Media not found');
       }
 
       const data = doc.data() as MediaMetadata;
       if (data.tenantId !== tenantId) {
-        throw new Error("Unauthorized");
+        throw new Error('Unauthorized');
       }
 
       // Idempotency Check
       if (data.status !== MediaStatus.PENDING_UPLOAD) {
-        // Already processed or processing, return success without action
-        return; 
+        return {
+          status: data.status,
+          message: 'Upload already confirmed.',
+          shouldPublish: false,
+          mediaPath: '',
+        };
       }
 
-      t.update(ref, { 
+      t.update(ref, { status: MediaStatus.UPLOADED });
+
+      return {
         status: MediaStatus.UPLOADED,
-        // Update uploadedAt to actual completion time if desired, or keep init time
-      });
-      
-      shouldPublish = true;
-      mediaPath = data.paths.original;
+        message: 'Upload confirmed',
+        shouldPublish: true,
+        mediaPath: data.paths.original,
+      };
     });
 
-    if (shouldPublish) {
-      const dataBuffer = Buffer.from(JSON.stringify({ 
-        mediaId, 
-        tenantId, 
-        storagePath: mediaPath 
-      }));
-      
+    if (result.shouldPublish) {
+      const dataBuffer = Buffer.from(
+        JSON.stringify({
+          mediaId,
+          tenantId,
+          storagePath: result.mediaPath,
+        })
+      );
       await pubsub.topic(config.PUBSUB_TOPIC).publishMessage({ data: dataBuffer });
     }
 
-    res.json({ status: MediaStatus.UPLOADED, message: 'Upload confirmed' });
-
-  } catch (error: any) {
-    if (error.message === 'Unauthorized') return res.status(403).json({ error: 'Unauthorized' });
-    if (error.message === 'Media not found') return res.status(404).json({ error: 'Media not found' });
+    return res.json({ status: result.status, message: result.message });
     
+  } catch (error: any) {
+    if (error.message === 'Unauthorized') {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+    if (error.message === 'Media not found') {
+      return res.status(404).json({ error: 'Media not found' });
+    }
     console.error('Complete upload failed', error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 };

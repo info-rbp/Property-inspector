@@ -53,8 +53,7 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
       tenantId: String(payload.tenantId),
       role: payload.role ? String(payload.role) : undefined,
     };
-
-    next();
+    return next();
   } catch (error) {
     console.error("Auth failed:", error);
     return res.status(401).json({ error: { code: "UNAUTHENTICATED", message: "Invalid token" } });
@@ -66,5 +65,5 @@ export const requireServiceAuth = (req: Request, res: Response, next: NextFuncti
   if (!secret || secret !== config.SERVICE_AUTH_SECRET) {
     return res.status(401).json({ error: { code: "UNAUTHENTICATED", message: "Invalid service auth" } });
   }
-  next();
+  return next();
 };

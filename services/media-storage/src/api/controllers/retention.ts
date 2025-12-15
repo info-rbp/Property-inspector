@@ -23,9 +23,9 @@ export const createPolicy = async (req: Request, res: Response) => {
 
   try {
     await createRetentionPolicy(policy);
-    res.status(201).json(policy);
+    return res.status(201).json(policy);
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    return res.status(500).json({ error: e.message });
   }
 };
 
@@ -33,9 +33,9 @@ export const listPolicies = async (req: Request, res: Response) => {
   const { tenantId } = req.user;
   try {
     const policies = await listRetentionPolicies(tenantId);
-    res.json({ data: policies });
+    return res.json({ data: policies });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    return res.status(500).json({ error: e.message });
   }
 };
 
@@ -59,12 +59,12 @@ export const applyPolicy = async (req: Request, res: Response) => {
 
     await updateMediaRetention(mediaId, tenantId, policyId, retentionDate.toISOString());
 
-    res.json({ 
+    return res.json({ 
         mediaId, 
         appliedPolicyId: policyId, 
         retentionUntil: retentionDate.toISOString() 
     });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    return res.status(500).json({ error: e.message });
   }
 };

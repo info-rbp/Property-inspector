@@ -6,8 +6,9 @@ export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
     return {
       server: {
-        port: 3000,
-        host: '0.0.0.0',
+        host: true,        // Bind to 0.0.0.0 so it’s reachable from outside the container
+        port: 5173,        // Use a dedicated port for inspection-ui
+        strictPort: true   // Fail if 5173 is taken instead of silently incrementing
       },
       plugins: [react()],
       define: {

@@ -76,12 +76,12 @@ export const processMediaHandler = async (req: Request, res: Response) => {
     });
 
     console.log(`Successfully processed ${mediaId}`);
-    res.status(200).send('OK');
+    return res.status(200).send('OK');
 
   } catch (error) {
     console.error('Processing failed', error);
     // Note: Pub/Sub will retry on non-200 status. 
     // If error is permanent (e.g. invalid image), we should catch and set status=FAILED to avoid infinite loop.
-    res.status(500).send('Internal Server Error');
+    return res.status(500).send('Internal Server Error');
   }
 };

@@ -1,10 +1,11 @@
 { pkgs, ... }:
-{
+  {
   packages = with pkgs; [
     nodejs_20
     pnpm
     firebase-tools
-  ];
+    openssl_1_1
+];
 
   idx.previews = {
     enable = true;
@@ -15,9 +16,11 @@
     };
   };
 
-  # Ensure globally installed npm binaries are discoverable
-  shellHook = ''
-    export NPM_CONFIG_PREFIX=$HOME/.npm-global
-    export PATH=$HOME/.npm-global/bin:$PATH
-  '';
-}
+shellHook = ''
+  # keep globals isolated, but don't override everything
+  export NPM_CONFIG_PREFIX=$HOME/.npm-global
+  if [ -d "$HOME/.npm-global/bin" ]; then
+    export PATH="$HOME/.npm-global/bin:$PATH"
+  fi
+'';}
+

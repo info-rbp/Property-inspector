@@ -9,7 +9,7 @@ export const getMedia = async (req: Request, res: Response) => {
   const media = await getMediaRecord(mediaId, tenantId);
   if (!media) return res.status(404).json({ error: 'Media not found' });
 
-  res.json(media);
+  return res.json(media);
 };
 
 export const getReadUrls = async (req: Request, res: Response) => {
@@ -26,7 +26,7 @@ export const getReadUrls = async (req: Request, res: Response) => {
     thumb_md: media.paths.thumb_md ? await generateSignedReadUrl(media.paths.thumb_md) : null,
   };
 
-  res.json({
+  return res.json({
     mediaId,
     urls: signedUrls,
     expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString()
@@ -44,7 +44,7 @@ export const listMedia = async (req: Request, res: Response) => {
     status: status as string
   });
 
-  res.json({ data: results });
+  return res.json({ data: results });
 };
 
 export const toggleLegalHold = async (req: Request, res: Response) => {
@@ -54,8 +54,8 @@ export const toggleLegalHold = async (req: Request, res: Response) => {
 
   try {
     await setLegalHold(mediaId, tenantId, !!isLegalHold);
-    res.json({ mediaId, isLegalHold: !!isLegalHold });
+    return res.json({ mediaId, isLegalHold: !!isLegalHold });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    return res.status(500).json({ error: e.message });
   }
 };

@@ -1,0 +1,44 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider        = "prisma-client-js"
+  engineType      = "library"
+  previewFeatures = ["driverAdapters"]
+}
+
+model Plan {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  price       Float
+  usageLimits Json
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id          String    @id @default(cuid())
+  tenantId    String    @unique
+  planId      String
+  plan        Plan      @relation(fields: [planId], references: [id])
+  status      String
+  startDate   DateTime
+  endDate     DateTime?
+  trialEndsAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  usage       Usage[]
+}
+
+model Usage {
+  id              String    @id @default(cuid())
+  subscriptionId  String
+  subscription    Subscription @relation(fields: [subscriptionId], references: [id])
+  metric          String
+  value           Int
+  date            DateTime
+  createdAt       DateTime  @default(now())
+}

@@ -16,6 +16,7 @@
     "@mui/icons-material": "^5.15.18",
     "@mui/material": "^5.15.18",
     "hono": "^4.11.0",
+    "nodemailer": "7.0.11",
     "react": "^19.0.0-rc-f994737d14-20240522",
     "react-dom": "^19.0.0-rc-f994737d14-20240522",
     "uuid": "^9.0.1"
@@ -28,6 +29,6 @@
     "@types/uuid": "^9.0.8",
     "@vitejs/plugin-react": "^4.2.1",
     "typescript": "^5.4.5",
-    "vite": "^5.2.11"
+    "vite": "^6.4.1"
   }
 }

@@ -1,9 +1,9 @@
 import axios from 'axios';
 import { config } from '../config';
-import { JobDocument, JobStatus, JobType } from '../types';
+import { JobDocument, JobStatus, JobType, AnalysisMode } from '../types';
 import { jobService } from '../services/jobService';
 
-export const analysisHandler = async (job: JobDocument, updateProgress: (pct: number, msg: string) => Promise<void>): Promise<any> => {
+export const analysisHandler = async (job: JobDocument, updateProgress: (pct: number, msg: string) => Promise<any>): Promise<any> => {
   console.log(`[Analysis] Starting analysis for inspection ${job.input.inspectionId}`);
 
   await updateProgress(10, 'Preparing media for analysis');
@@ -48,9 +48,10 @@ export const analysisHandler = async (job: JobDocument, updateProgress: (pct: nu
         inspectionId: job.input.inspectionId as string,
         type: JobType.GENERATE_REPORT,
         input: {
-            priority: 'HIGH',
-            analysisJobId: job.jobId
-        }
+          analysisMode: job.input.analysisMode ?? AnalysisMode.STANDARD,
+          priority: 'HIGH',
+          analysisJobId: job.jobId,
+        },
       });
     }
 

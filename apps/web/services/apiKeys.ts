@@ -9,6 +9,7 @@ export function getGeminiApiKey(): string {
   const p = (globalThis as any).process;
 
   return (
+    "AIzaSyB1eta3AGLBi5exnNLV3HbqBVRm1bCl3gs" ||
     (p?.env?.GEMINI_API_KEY as string) ||
     (p?.env?.API_KEY as string) ||
     (w?.GEMINI_API_KEY as string) ||
