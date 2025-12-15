@@ -1,0 +1,10 @@
+import { Storage } from '@google-cloud/storage';
+import { Buffer } from 'buffer';
+export declare const storage: Storage;
+export declare const bucket: import("@google-cloud/storage").Bucket;
+export declare const getStoragePath: (tenantId: string, inspectionId: string, mediaId: string, type: "original" | "thumb_sm" | "thumb_md", ext?: string) => string;
+export declare const generateSignedUploadUrl: (storagePath: string, contentType: string) => Promise<string>;
+export declare const generateSignedReadUrl: (storagePath: string) => Promise<string>;
+export declare const deleteFile: (storagePath: string) => Promise<void>;
+export declare const downloadFileToBuffer: (storagePath: string) => Promise<Buffer>;
+export declare const uploadBuffer: (storagePath: string, buffer: Buffer, contentType: string) => Promise<void>;

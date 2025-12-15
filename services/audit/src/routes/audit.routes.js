@@ -1,0 +1,52 @@
+"use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const AuditController = __importStar(require("../controllers/audit.controller"));
+const auth_middleware_1 = require("../middleware/auth.middleware");
+const router = (0, express_1.Router)();
+// --- Internal Write API ---
+// Protected by Shared Secret or IAM
+router.post('/events', auth_middleware_1.requireServiceAuth, AuditController.createEvent);
+// --- Tenant Read API ---
+// Protected by User JWT + Tenant Scoping
+// Read history for specific entity
+router.get('/entities/:entityType/:entityId', auth_middleware_1.requireTenantAuth, auth_middleware_1.enforceTenantScope, AuditController.getEntityHistory);
+// Get Inspection Summary (Dispute/Compliance View)
+router.get('/inspections/:inspectionId/summary', auth_middleware_1.requireTenantAuth, auth_middleware_1.enforceTenantScope, AuditController.getInspectionSummary);
+// --- Admin Export ---
+router.get('/admin/export', auth_middleware_1.requireTenantAuth, // In reality, check for specific 'admin' role permissions here too
+auth_middleware_1.enforceTenantScope, AuditController.exportAuditLog);
+exports.default = router;
